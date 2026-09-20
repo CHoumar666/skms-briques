@@ -71,6 +71,8 @@ function ajouterColonne(table: string, colonne: string, definition: string) {
 ajouterColonne("livraisons", "created_by", "INTEGER REFERENCES users(id)");
 ajouterColonne("ventes", "created_by", "INTEGER REFERENCES users(id)");
 ajouterColonne("transactions", "created_by", "INTEGER REFERENCES users(id)");
+ajouterColonne("livraisons", "statut_paiement", "TEXT NOT NULL DEFAULT 'paye'");
+ajouterColonne("ventes", "statut_paiement", "TEXT NOT NULL DEFAULT 'paye'");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS audit_log (
@@ -104,6 +106,7 @@ export type Livraison = {
   quantite: number;
   prix_unitaire: number;
   notes: string | null;
+  statut_paiement: StatutLivraison;
   created_at: string;
 };
 
@@ -114,6 +117,7 @@ export type Vente = {
   quantite: number;
   prix_unitaire: number;
   notes: string | null;
+  statut_paiement: StatutVente;
   created_at: string;
 };
 
@@ -126,6 +130,9 @@ export type Transaction = {
   description: string | null;
   created_at: string;
 };
+
+export type StatutLivraison = "paye" | "a_payer" | "sans_paiement";
+export type StatutVente = "paye" | "a_encaisser";
 
 export type Role = "proprietaire" | "personnel";
 

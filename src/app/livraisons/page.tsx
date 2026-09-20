@@ -56,6 +56,7 @@ export default async function LivraisonsPage({
                   <th className="px-5 py-3 font-medium text-right">Quantité</th>
                   <th className="px-5 py-3 font-medium text-right">Prix unitaire</th>
                   <th className="px-5 py-3 font-medium text-right">Total</th>
+                  <th className="px-5 py-3 font-medium">Paiement</th>
                   <th className="px-5 py-3 font-medium">Notes</th>
                   <th className="px-5 py-3 font-medium">Saisi par</th>
                 </tr>
@@ -70,6 +71,7 @@ export default async function LivraisonsPage({
                     <td className="px-5 py-3 text-right font-medium">
                       {formatMontant(l.quantite * l.prix_unitaire)}
                     </td>
+                    <td className="px-5 py-3">{l.statut_paiement === "paye" ? "Payée" : l.statut_paiement === "a_payer" ? "À payer" : "Sans paiement"}</td>
                     <td className="px-5 py-3 text-slate-500">{l.notes ?? ""}</td>
                     <td className="px-5 py-3 text-slate-500">{l.saisi_par ?? "—"}</td>
                   </tr>

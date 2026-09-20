@@ -6,6 +6,7 @@ import type { Fournisseur } from "@/lib/db";
 
 export default function LivraisonForm({ fournisseurs }: { fournisseurs: Fournisseur[] }) {
   const [nouveauFournisseur, setNouveauFournisseur] = useState(false);
+  const [statut, setStatut] = useState("paye");
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
@@ -15,6 +16,7 @@ export default function LivraisonForm({ fournisseurs }: { fournisseurs: Fourniss
         await ajouterLivraison(formData);
         formRef.current?.reset();
         setNouveauFournisseur(false);
+        setStatut("paye");
       }}
       className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end"
     >
@@ -85,7 +87,7 @@ export default function LivraisonForm({ fournisseurs }: { fournisseurs: Fourniss
           type="number"
           name="prix_unitaire"
           min={0}
-          required
+          required={statut !== "sans_paiement"}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
         />
       </div>
@@ -97,7 +99,7 @@ export default function LivraisonForm({ fournisseurs }: { fournisseurs: Fourniss
         Ajouter
       </button>
 
-      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-6">
+      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-4">
         <label className="text-sm font-medium text-slate-700">Notes (optionnel)</label>
         <input
           type="text"
@@ -105,6 +107,21 @@ export default function LivraisonForm({ fournisseurs }: { fournisseurs: Fourniss
           placeholder="Ex: transport inclus, camion n°2..."
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
         />
+      </div>
+
+      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-2">
+        <label htmlFor="statut_paiement" className="text-sm font-medium text-slate-700">Paiement</label>
+        <select
+          id="statut_paiement"
+          name="statut_paiement"
+          defaultValue="paye"
+          onChange={(e) => setStatut(e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+        >
+          <option value="paye">Payée (l&apos;argent sort de la caisse)</option>
+          <option value="a_payer">À payer plus tard (dette fournisseur)</option>
+          <option value="sans_paiement">Sans paiement (stock seulement)</option>
+        </select>
       </div>
     </form>
   );

@@ -10,9 +10,13 @@ export async function ajouterLivraison(formData: FormData) {
   const user = await requireUser();
   const date = parseDate(formData.get("date"));
   const quantite = parsePositiveInt(formData.get("quantite"));
-  const prixUnitaire = parseNonNegativeInt(formData.get("prix_unitaire"));
+  const statut = formData.get("statut_paiement");
+  const statutValide = statut === "paye" || statut === "a_payer" || statut === "sans_paiement";
+  const prixSaisi = formData.get("prix_unitaire");
+  const prixUnitaire =
+    statut === "sans_paiement" && (prixSaisi === null || prixSaisi === "") ? 0 : parseNonNegativeInt(prixSaisi);
 
-  if (!date || quantite === null || prixUnitaire === null) {
+  if (!date || quantite === null || prixUnitaire === null || !statutValide) {
     redirect("/livraisons?erreur=1");
   }
 
@@ -26,6 +30,7 @@ export async function ajouterLivraison(formData: FormData) {
 
   createLivraison({
     created_by: user.id,
+    statut_paiement: statut,
     date,
     fournisseur_id: fournisseurId ? Number(fournisseurId) : null,
     quantite,

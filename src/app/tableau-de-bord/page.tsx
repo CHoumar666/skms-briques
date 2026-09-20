@@ -84,9 +84,13 @@ export default async function TableauDeBordPage() {
       <div className="p-8 space-y-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Stock de briques" value={stats.stockBriques.toLocaleString("fr-FR")} />
-          <StatCard label="Total revenus (ventes)" value={formatMontant(stats.totalRevenus)} tone="positive" />
-          <StatCard label="Total dépenses (achats)" value={formatMontant(stats.totalDepenses)} tone="negative" />
-          <StatCard label="Solde" value={formatMontant(stats.solde)} tone={stats.solde >= 0 ? "positive" : "negative"} />
+          <StatCard label="Argent encaissé" value={formatMontant(stats.argentEncaisse)} tone="positive" />
+          <StatCard label="Argent sorti" value={formatMontant(stats.argentSorti)} tone="negative" />
+          <StatCard label="Solde en caisse" value={formatMontant(stats.soldeCaisse)} tone={stats.soldeCaisse >= 0 ? "positive" : "negative"} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <StatCard label="À payer aux fournisseurs" value={formatMontant(stats.aPayer)} />
+          <StatCard label="À encaisser des clients" value={formatMontant(stats.aEncaisser)} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -105,7 +109,7 @@ export default async function TableauDeBordPage() {
                       <p className="font-medium text-slate-900">{l.fournisseur_nom ?? "Fournisseur inconnu"}</p>
                       <p className="text-slate-500">{formatDate(l.date)} · {l.quantite.toLocaleString("fr-FR")} briques</p>
                     </div>
-                    <span className="font-medium text-slate-900">{formatMontant(l.quantite * l.prix_unitaire)}</span>
+                    <span className="text-right"><span className="block font-medium text-slate-900">{formatMontant(l.quantite * l.prix_unitaire)}</span><span className="block text-xs text-slate-500">{l.statut_paiement === "paye" ? "payée" : l.statut_paiement === "a_payer" ? "à payer" : "stock seulement"}</span></span>
                   </li>
                 ))}
               </ul>
@@ -127,7 +131,7 @@ export default async function TableauDeBordPage() {
                       <p className="font-medium text-slate-900">{v.client_nom ?? "Client au comptant"}</p>
                       <p className="text-slate-500">{formatDate(v.date)} · {v.quantite.toLocaleString("fr-FR")} briques</p>
                     </div>
-                    <span className="font-medium text-slate-900">{formatMontant(v.quantite * v.prix_unitaire)}</span>
+                    <span className="text-right"><span className="block font-medium text-slate-900">{formatMontant(v.quantite * v.prix_unitaire)}</span><span className="block text-xs text-slate-500">{v.statut_paiement === "paye" ? "encaissée" : "à encaisser"}</span></span>
                   </li>
                 ))}
               </ul>

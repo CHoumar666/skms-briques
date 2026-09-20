@@ -13,6 +13,7 @@ export default async function VentesDuJourPage() {
   const ventes = listVentesParDate(today);
   const totalQuantite = ventes.reduce((sum, v) => sum + v.quantite, 0);
   const totalMontant = ventes.reduce((sum, v) => sum + v.quantite * v.prix_unitaire, 0);
+  const totalEncaisse = ventes.filter((v) => v.statut_paiement === "paye").reduce((sum, v) => sum + v.quantite * v.prix_unitaire, 0);
 
   return (
     <div>
@@ -22,10 +23,11 @@ export default async function VentesDuJourPage() {
       />
 
       <div className="p-8 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Nombre de ventes" value={String(ventes.length)} />
           <StatCard label="Briques vendues" value={totalQuantite.toLocaleString("fr-FR")} />
-          <StatCard label="Total encaissé" value={formatMontant(totalMontant)} tone="positive" />
+          <StatCard label="Total vendu" value={formatMontant(totalMontant)} />
+          <StatCard label="Total encaissé" value={formatMontant(totalEncaisse)} tone="positive" />
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">

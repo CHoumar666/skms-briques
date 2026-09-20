@@ -14,11 +14,11 @@ export async function GET() {
   if (!user) return new Response("Non autorisé", { status: 401 });
 
   const lignes = getLedger().map((l) =>
-    [l.date, l.type === "revenu" ? "Revenu" : "Dépense", l.categorie, l.description, l.saisi_par, l.type === "revenu" ? l.montant : -l.montant]
+    [l.date, l.type === "revenu" ? "Revenu" : "Dépense", l.categorie, l.description, l.saisi_par, ({ paye: "Payé", a_payer: "À payer", a_encaisser: "À encaisser", sans_paiement: "Sans paiement" })[l.statut], l.compteEnCaisse ? (l.type === "revenu" ? l.montant : -l.montant) : 0, l.montant]
       .map(cellule)
       .join(";")
   );
-  const csv = "﻿" + ["Date;Type;Catégorie;Description;Saisi par;Montant (FCFA)", ...lignes].join("\r\n");
+  const csv = "﻿" + ["Date;Type;Catégorie;Description;Saisi par;Paiement;Mouvement de caisse (FCFA);Montant de l'opération (FCFA)", ...lignes].join("\r\n");
 
   return new Response(csv, {
     headers: {

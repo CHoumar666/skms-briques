@@ -12,7 +12,9 @@ export async function ajouterVente(formData: FormData) {
   const quantite = parsePositiveInt(formData.get("quantite"));
   const prixUnitaire = parseNonNegativeInt(formData.get("prix_unitaire"));
 
-  if (!date || quantite === null || prixUnitaire === null) {
+  const statut = formData.get("statut_paiement");
+
+  if (!date || quantite === null || prixUnitaire === null || (statut !== "paye" && statut !== "a_encaisser")) {
     redirect("/ventes?erreur=1");
   }
 
@@ -26,6 +28,7 @@ export async function ajouterVente(formData: FormData) {
 
   const result = createVente({
     created_by: user.id,
+    statut_paiement: statut,
     date,
     client_id: clientId ? Number(clientId) : null,
     quantite,

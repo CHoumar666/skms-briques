@@ -88,7 +88,7 @@ export default function VenteForm({ clients }: { clients: Client[] }) {
         Enregistrer & générer le reçu
       </button>
 
-      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-6">
+      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-4">
         <label className="text-sm font-medium text-slate-700">Notes (optionnel)</label>
         <input
           type="text"
@@ -96,6 +96,20 @@ export default function VenteForm({ clients }: { clients: Client[] }) {
           placeholder="Ex: livraison chantier X..."
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
         />
+      </div>
+
+      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-2">
+        <label htmlFor="statut_paiement" className="text-sm font-medium text-slate-700">Paiement</label>
+        <select
+          id="statut_paiement"
+          name="statut_paiement"
+          defaultValue="paye"
+          
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+        >
+          <option value="paye">Encaissée (l&apos;argent entre en caisse)</option>
+          <option value="a_encaisser">À encaisser plus tard (crédit client)</option>
+        </select>
       </div>
     </form>
   );

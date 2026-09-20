@@ -1,6 +1,6 @@
 "use server";
 
-import { createTransaction, supprimerOperation, type SourceOperation } from "@/lib/queries";
+import { createTransaction, setStatutPaiement, supprimerOperation, type SourceOperation } from "@/lib/queries";
 import { parseDate, parsePositiveInt } from "@/lib/validate";
 import { requireOwner, requireUser } from "@/lib/session";
 import { revalidatePath } from "next/cache";
@@ -36,6 +36,18 @@ export async function supprimerLigne(formData: FormData) {
   const id = Number(formData.get("id"));
   if ((source === "livraison" || source === "vente" || source === "transaction") && Number.isInteger(id)) {
     supprimerOperation(source as SourceOperation, id, user.id);
+  }
+  revalidatePath("/comptabilite");
+  revalidatePath("/tableau-de-bord");
+}
+
+export async function changerPaiement(formData: FormData) {
+  const user = await requireUser();
+  const source = formData.get("source");
+  const id = Number(formData.get("id"));
+  const statut = String(formData.get("statut") ?? "");
+  if ((source === "livraison" || source === "vente") && Number.isInteger(id)) {
+    setStatutPaiement(source, id, statut, user.id);
   }
   revalidatePath("/comptabilite");
   revalidatePath("/tableau-de-bord");

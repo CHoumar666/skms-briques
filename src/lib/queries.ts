@@ -1,5 +1,5 @@
 import "server-only";
-import db, { Client, Fournisseur, Livraison, Transaction, Vente } from "./db";
+import db, { Client, Fournisseur, Livraison, StatutLivraison, StatutVente, Transaction, Vente } from "./db";
 
 export function listFournisseurs(): Fournisseur[] {
   return db.prepare("SELECT * FROM fournisseurs ORDER BY nom").all() as Fournisseur[];
@@ -42,11 +42,12 @@ export function createLivraison(input: {
   prix_unitaire: number;
   notes: string;
   created_by: number;
+  statut_paiement: StatutLivraison;
 }) {
   return db
     .prepare(
-      `INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes, created_by)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes, created_by, statut_paiement)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.date,
@@ -54,7 +55,8 @@ export function createLivraison(input: {
       input.quantite,
       input.prix_unitaire,
       input.notes || null,
-      input.created_by
+      input.created_by,
+      input.statut_paiement
     );
 }
 
@@ -109,11 +111,12 @@ export function createVente(input: {
   prix_unitaire: number;
   notes: string;
   created_by: number;
+  statut_paiement: StatutVente;
 }) {
   return db
     .prepare(
-      `INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes, created_by)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes, created_by, statut_paiement)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.date,
@@ -181,7 +184,26 @@ export type LigneComptable = {
   categorie: string;
   montant: number;
   description: string | null;
+  statut: "paye" | "a_payer" | "a_encaisser" | "sans_paiement";
+  compteEnCaisse: boolean;
 };
+
+export function setStatutPaiement(source: "livraison" | "vente", id: number, statut: string, userId: number): boolean {
+  const valides = source === "livraison" ? ["paye", "a_payer", "sans_paiement"] : ["paye", "a_encaisser"];
+  if (!valides.includes(statut)) return false;
+  const table = TABLES[source];
+  const avant = db.prepare(`SELECT statut_paiement FROM ${table} WHERE id = ?`).get(id) as { statut_paiement: string } | undefined;
+  if (!avant) return false;
+  db.transaction(() => {
+    db.prepare(`UPDATE ${table} SET statut_paiement = ? WHERE id = ?`).run(statut, id);
+    db.prepare("INSERT INTO audit_log (user_id, action, detail) VALUES (?, ?, ?)").run(
+      userId,
+      `paiement_${source}`,
+      JSON.stringify({ id, avant: avant.statut_paiement, apres: statut })
+    );
+  })();
+  return true;
+}
 
 export function getLedger(): LigneComptable[] {
   const lignes: LigneComptable[] = [];
@@ -197,6 +219,8 @@ export function getLedger(): LigneComptable[] {
       categorie: "Achat briques",
       montant: l.quantite * l.prix_unitaire,
       description: l.fournisseur_nom ? `Fournisseur: ${l.fournisseur_nom}` : l.notes,
+      statut: l.statut_paiement,
+      compteEnCaisse: l.statut_paiement === "paye",
     });
   }
 
@@ -211,6 +235,8 @@ export function getLedger(): LigneComptable[] {
       categorie: "Vente briques",
       montant: v.quantite * v.prix_unitaire,
       description: v.client_nom ? `Client: ${v.client_nom}` : v.notes,
+      statut: v.statut_paiement,
+      compteEnCaisse: v.statut_paiement === "paye",
     });
   }
 
@@ -225,44 +251,36 @@ export function getLedger(): LigneComptable[] {
       categorie: t.categorie,
       montant: t.montant,
       description: t.description,
+      statut: "paye",
+      compteEnCaisse: true,
     });
   }
 
   return lignes.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
+function somme(sql: string): number {
+  return (db.prepare(sql).get() as { m: number }).m;
+}
+
 export function getStats() {
-  const totalLivraisons = db
-    .prepare("SELECT COALESCE(SUM(quantite), 0) as q FROM livraisons")
-    .get() as { q: number };
-  const totalVentes = db
-    .prepare("SELECT COALESCE(SUM(quantite), 0) as q FROM ventes")
-    .get() as { q: number };
+  const stockBriques = somme("SELECT COALESCE(SUM(quantite), 0) AS m FROM livraisons") - somme("SELECT COALESCE(SUM(quantite), 0) AS m FROM ventes");
 
-  const depensesLivraisons = db
-    .prepare("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) as m FROM livraisons")
-    .get() as { m: number };
-  const revenusVentes = db
-    .prepare("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) as m FROM ventes")
-    .get() as { m: number };
-  const autresDepenses = db
-    .prepare("SELECT COALESCE(SUM(montant), 0) as m FROM transactions WHERE type = 'depense'")
-    .get() as { m: number };
-  const autresRevenus = db
-    .prepare("SELECT COALESCE(SUM(montant), 0) as m FROM transactions WHERE type = 'revenu'")
-    .get() as { m: number };
-
-  const stockBriques = totalLivraisons.q - totalVentes.q;
-  const totalDepenses = depensesLivraisons.m + autresDepenses.m;
-  const totalRevenus = revenusVentes.m + autresRevenus.m;
-  const solde = totalRevenus - totalDepenses;
+  const argentEncaisse =
+    somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'paye'") +
+    somme("SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'revenu'");
+  const argentSorti =
+    somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'paye'") +
+    somme("SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'depense'");
+  const aPayer = somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'a_payer'");
+  const aEncaisser = somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'a_encaisser'");
 
   return {
     stockBriques,
-    totalDepenses,
-    totalRevenus,
-    solde,
-    depensesLivraisons: depensesLivraisons.m,
-    revenusVentes: revenusVentes.m,
+    argentEncaisse,
+    argentSorti,
+    soldeCaisse: argentEncaisse - argentSorti,
+    aPayer,
+    aEncaisser,
   };
 }
