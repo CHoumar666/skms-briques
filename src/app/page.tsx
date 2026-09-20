@@ -83,7 +83,7 @@ export default async function AccueilPage() {
           <div className="mt-12 max-w-xl">
             <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">
               Construisez durablement avec nos
-              <span className="block text-6xl font-black tracking-tight text-[#b8320f] sm:text-8xl">BRIQUES</span>
+              <span className="block text-[clamp(2.5rem,16vw,6rem)] font-black tracking-tight text-[#b8320f]">BRIQUES</span>
             </h1>
             <p className="mt-3 text-xl text-slate-700">La qualité au service de vos constructions</p>
             <span aria-hidden="true" className="mt-2 block h-1 w-40 rounded-full bg-orange-600" />

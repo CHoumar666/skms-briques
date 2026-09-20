@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/session";
 import PrintButton from "@/components/PrintButton";
 import { formatDate, formatMontant } from "@/lib/format";
 import { getVente } from "@/lib/queries";
@@ -5,6 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 export default async function RecuPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireUser();
   const { id } = await params;
   const vente = getVente(Number(id));
 

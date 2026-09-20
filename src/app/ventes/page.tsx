@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/session";
 import PageHeader from "@/components/PageHeader";
 import { formatDate, formatMontant } from "@/lib/format";
 import { listClients, listVentes } from "@/lib/queries";
@@ -11,6 +12,7 @@ export default async function VentesPage({
 }: {
   searchParams: Promise<{ erreur?: string }>;
 }) {
+  await requireUser();
   const params = await searchParams;
   const ventes = listVentes();
   const clients = listClients();

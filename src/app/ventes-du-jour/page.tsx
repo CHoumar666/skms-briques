@@ -1,3 +1,4 @@
+import { requireOwner } from "@/lib/session";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import { formatDate, formatMontant, todayISO } from "@/lib/format";
@@ -6,7 +7,8 @@ import { listVentesParDate } from "@/lib/queries";
 // Dépend de la date du jour et des ventes live : jamais de mise en cache statique.
 export const dynamic = "force-dynamic";
 
-export default function VentesDuJourPage() {
+export default async function VentesDuJourPage() {
+  await requireOwner();
   const today = todayISO();
   const ventes = listVentesParDate(today);
   const totalQuantite = ventes.reduce((sum, v) => sum + v.quantite, 0);

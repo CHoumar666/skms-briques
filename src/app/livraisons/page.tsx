@@ -1,3 +1,4 @@
+import { requireUser } from "@/lib/session";
 import PageHeader from "@/components/PageHeader";
 import { formatDate, formatMontant } from "@/lib/format";
 import { listFournisseurs, listLivraisons } from "@/lib/queries";
@@ -10,6 +11,7 @@ export default async function LivraisonsPage({
 }: {
   searchParams: Promise<{ erreur?: string }>;
 }) {
+  await requireUser();
   const params = await searchParams;
   const livraisons = listLivraisons();
   const fournisseurs = listFournisseurs();

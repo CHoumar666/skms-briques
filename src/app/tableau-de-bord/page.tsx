@@ -124,7 +124,7 @@ export default async function TableauDeBordPage() {
                 {dernieresVentes.map((v) => (
                   <li key={v.id} className="flex items-center justify-between px-5 py-3 text-sm">
                     <div>
-                      <p className="font-medium text-slate-900">{v.client_nom ?? "Client inconnu"}</p>
+                      <p className="font-medium text-slate-900">{v.client_nom ?? "Client au comptant"}</p>
                       <p className="text-slate-500">{formatDate(v.date)} · {v.quantite.toLocaleString("fr-FR")} briques</p>
                     </div>
                     <span className="font-medium text-slate-900">{formatMontant(v.quantite * v.prix_unitaire)}</span>
