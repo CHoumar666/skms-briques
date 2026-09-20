@@ -10,7 +10,7 @@ export default function NotFound() {
           La page que vous cherchez n&apos;existe pas ou a été déplacée.
         </p>
         <Link
-          href="/"
+          href="/tableau-de-bord"
           className="mt-6 inline-block rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 transition-colors"
         >
           Retour au tableau de bord

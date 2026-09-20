@@ -1,8 +1,8 @@
-const COOKIE_NAME = "admin_session";
-const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
-
-export const SESSION_COOKIE = COOKIE_NAME;
+export const SESSION_COOKIE = "session";
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 export const SESSION_MAX_AGE_SECONDS = SESSION_DURATION_MS / 1000;
+
+export type SessionPayload = { userId: number; role: "proprietaire" | "personnel" };
 
 function toHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
@@ -12,18 +12,14 @@ function toHex(buffer: ArrayBuffer): string {
 
 function fromHex(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-  }
+  for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
   return bytes;
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return result === 0;
 }
 
@@ -35,29 +31,32 @@ async function hmac(data: string, secret: string): Promise<string> {
     false,
     ["sign"]
   );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
-  return toHex(signature);
+  return toHex(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data)));
 }
 
-export async function derivePasswordHash(
-  password: string,
-  saltHex: string,
-  iterations = 100_000
-): Promise<string> {
-  const salt = fromHex(saltHex);
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"]
-  );
+async function derivePasswordHash(password: string, saltHex: string, iterations = 100_000): Promise<string> {
+  const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, [
+    "deriveBits",
+  ]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: salt as BufferSource, iterations, hash: "SHA-256" },
+    { name: "PBKDF2", salt: fromHex(saltHex) as BufferSource, iterations, hash: "SHA-256" },
     keyMaterial,
     256
   );
   return toHex(bits);
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+  const saltHex = toHex(salt.buffer);
+  return `${saltHex}:${await derivePasswordHash(password, saltHex)}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [salt, hash] = stored.split(":");
+  if (!salt || !hash || !password) return false;
+  return timingSafeEqual(await derivePasswordHash(password, salt), hash);
 }
 
 function getSecret(): string {
@@ -66,35 +65,22 @@ function getSecret(): string {
   return secret;
 }
 
-export async function verifyAdminCredentials(username: string, password: string): Promise<boolean> {
-  const expectedUsername = process.env.ADMIN_USERNAME;
-  const stored = process.env.ADMIN_PASSWORD_HASH;
-  if (!expectedUsername || !stored || !username || !password) return false;
-  if (username !== expectedUsername) return false;
-
-  const [salt, hash] = stored.split(":");
-  if (!salt || !hash) return false;
-
-  const computed = await derivePasswordHash(password, salt);
-  return timingSafeEqual(computed, hash);
+export async function createSessionToken(payload: SessionPayload): Promise<string> {
+  const body = `${payload.userId}.${payload.role}.${Date.now() + SESSION_DURATION_MS}`;
+  return `${body}.${await hmac(body, getSecret())}`;
 }
 
-export async function createSessionToken(username: string): Promise<string> {
-  const expiry = Date.now() + SESSION_DURATION_MS;
-  const payload = `${username}.${expiry}`;
-  const signature = await hmac(payload, getSecret());
-  return `${payload}.${signature}`;
-}
-
-export async function verifySessionToken(token: string | undefined | null): Promise<boolean> {
-  if (!token) return false;
+export async function verifySessionToken(token: string | undefined | null): Promise<SessionPayload | null> {
+  if (!token) return null;
   const parts = token.split(".");
-  if (parts.length !== 3) return false;
+  if (parts.length !== 4) return null;
 
-  const [username, expiryStr, signature] = parts;
+  const [userIdStr, role, expiryStr, signature] = parts;
   const expiry = Number(expiryStr);
-  if (!Number.isFinite(expiry) || Date.now() > expiry) return false;
+  const userId = Number(userIdStr);
+  if (!Number.isInteger(userId) || !Number.isFinite(expiry) || Date.now() > expiry) return null;
+  if (role !== "proprietaire" && role !== "personnel") return null;
 
-  const expectedSignature = await hmac(`${username}.${expiryStr}`, getSecret());
-  return timingSafeEqual(signature, expectedSignature);
+  const expected = await hmac(`${userIdStr}.${role}.${expiryStr}`, getSecret());
+  return timingSafeEqual(signature, expected) ? { userId, role } : null;
 }

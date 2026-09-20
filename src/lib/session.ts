@@ -1,11 +1,26 @@
 import "server-only";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+import type { User } from "@/lib/db";
+import { getUserById } from "@/lib/users";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-export async function requireSession(): Promise<void> {
+export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
-  if (!(await verifySessionToken(cookieStore.get(SESSION_COOKIE)?.value))) {
-    redirect("/connexion");
-  }
+  const payload = await verifySessionToken(cookieStore.get(SESSION_COOKIE)?.value);
+  if (!payload) return null;
+  const user = getUserById(payload.userId);
+  return user && user.actif === 1 ? user : null;
+}
+
+export async function requireUser(): Promise<User> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/connexion");
+  return user;
+}
+
+export async function requireOwner(): Promise<User> {
+  const user = await requireUser();
+  if (user.role !== "proprietaire") redirect("/");
+  return user;
 }

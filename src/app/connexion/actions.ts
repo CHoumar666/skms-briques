@@ -1,12 +1,13 @@
 "use server";
 
-import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSessionToken, verifyAdminCredentials } from "@/lib/auth";
+import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, createSessionToken, verifyPassword } from "@/lib/auth";
+import { getUserByUsername } from "@/lib/users";
 import { clearAttempts, isRateLimited, recordFailedAttempt } from "@/lib/rate-limit";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 function safeRedirectTarget(from: string | null): string {
-  if (!from || !from.startsWith("/") || from.startsWith("//") || from.startsWith("/connexion")) return "/";
+  if (!from || from === "/" || !from.startsWith("/") || from.startsWith("//") || from.startsWith("/connexion")) return "/tableau-de-bord";
   return from;
 }
 
@@ -22,14 +23,15 @@ export async function connexion(formData: FormData) {
     redirect(`/connexion?error=limite&from=${encodeURIComponent(from)}`);
   }
 
-  const valid = await verifyAdminCredentials(username, password);
-  if (!valid) {
+  const user = getUserByUsername(username.trim());
+  const valid = !!user && user.actif === 1 && (await verifyPassword(password, user.password_hash));
+  if (!user || !valid) {
     recordFailedAttempt(ip);
     redirect(`/connexion?error=1&from=${encodeURIComponent(from)}`);
   }
 
   clearAttempts(ip);
-  const token = await createSessionToken(username);
+  const token = await createSessionToken({ userId: user.id, role: user.role });
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,

@@ -43,6 +43,15 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('proprietaire', 'personnel')),
+    actif INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT NOT NULL,
@@ -96,5 +105,16 @@ export type Transaction = {
   categorie: string;
   montant: number;
   description: string | null;
+  created_at: string;
+};
+
+export type Role = "proprietaire" | "personnel";
+
+export type User = {
+  id: number;
+  username: string;
+  password_hash: string;
+  role: Role;
+  actif: number;
   created_at: string;
 };

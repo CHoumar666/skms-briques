@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AppShell from "@/components/AppShell";
+import { getCurrentUser } from "@/lib/session";
 import { siteConfig } from "@/lib/site";
 import "./globals.css";
 
@@ -36,14 +37,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const user = await getCurrentUser();
+
   return (
     <html
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-slate-50">
-        <AppShell>{children}</AppShell>
+        <AppShell user={user ? { username: user.username, role: user.role } : null}>{children}</AppShell>
       </body>
     </html>
   );

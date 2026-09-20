@@ -6,13 +6,13 @@ export default async function ConnexionPage({
   searchParams: Promise<{ from?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const from = params.from ?? "/";
+  const from = params.from ?? "/tableau-de-bord";
 
   return (
     <div className="min-h-screen flex items-center justify-center p-8 bg-slate-50">
       <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="text-lg font-semibold text-slate-900 mb-1">Connexion</h1>
-        <p className="text-sm text-slate-500 mb-6">Accès réservé au propriétaire de SKMS Brique.</p>
+        <p className="text-sm text-slate-500 mb-6">Accès réservé au propriétaire et au personnel de SKMS Brique.</p>
 
         {params.error === "limite" && (
           <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

@@ -2,35 +2,53 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
 import CookieBanner from "./CookieBanner";
 import { siteConfig } from "@/lib/site";
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+export type ShellUser = { username: string; role: "proprietaire" | "personnel" } | null;
+
+export default function AppShell({ children, user }: { children: React.ReactNode; user: ShellUser }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  if (pathname === "/connexion") return <>{children}</>;
+  if (pathname === "/" || pathname === "/connexion") {
+    return (
+      <>
+        {children}
+        <CookieBanner />
+      </>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <header className="border-b border-slate-200 bg-white px-8 py-4">
+          <Link href="/" className="font-semibold text-slate-900">{siteConfig.shortName}</Link>
+        </header>
+        <div className="flex-1">{children}</div>
+        <Footer />
+        <CookieBanner />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full">
       <div className="hidden lg:block">
-        <Sidebar />
+        <Sidebar username={user.username} role={user.role} />
       </div>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {open && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
       <div
         className={`fixed inset-y-0 left-0 z-50 transition-transform lg:hidden ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <Sidebar onNavigate={() => setOpen(false)} />
+        <Sidebar onNavigate={() => setOpen(false)} username={user.username} role={user.role} />
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">

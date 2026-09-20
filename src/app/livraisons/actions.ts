@@ -2,12 +2,12 @@
 
 import { createFournisseur, createLivraison } from "@/lib/queries";
 import { parseDate, parseNonNegativeInt, parsePositiveInt } from "@/lib/validate";
-import { requireSession } from "@/lib/session";
+import { requireUser } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function ajouterLivraison(formData: FormData) {
-  await requireSession();
+  await requireUser();
   const date = parseDate(formData.get("date"));
   const quantite = parsePositiveInt(formData.get("quantite"));
   const prixUnitaire = parseNonNegativeInt(formData.get("prix_unitaire"));
@@ -33,5 +33,5 @@ export async function ajouterLivraison(formData: FormData) {
   });
 
   revalidatePath("/livraisons");
-  revalidatePath("/");
+  revalidatePath("/tableau-de-bord");
 }
