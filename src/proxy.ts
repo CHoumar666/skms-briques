@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+
+const PUBLIC_PATHS = [
+  "/connexion",
+  "/confidentialite",
+  "/cgu",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/icon",
+  "/opengraph-image",
+];
 
 export async function proxy(request: NextRequest) {
   const proto = request.headers.get("x-forwarded-proto");
@@ -11,23 +21,18 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isLoginPage = pathname === "/admin/connexion";
+  if (PUBLIC_PATHS.includes(pathname)) return NextResponse.next();
 
-  if (isAdminRoute && !isLoginPage) {
-    const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-    const authenticated = await verifySessionToken(token);
-
-    if (!authenticated) {
-      const loginUrl = new URL("/admin/connexion", request.url);
-      loginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  if (!(await verifySessionToken(token))) {
+    const loginUrl = new URL("/connexion", request.url);
+    if (pathname !== "/") loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: "/((?!_next/static|_next/image).*)",
+  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
 };

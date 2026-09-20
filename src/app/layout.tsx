@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AppShell from "@/components/AppShell";
 import { siteConfig } from "@/lib/site";
-import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -45,7 +44,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full bg-slate-50">
         <AppShell>{children}</AppShell>
-        <Analytics />
       </body>
     </html>
   );

@@ -2,10 +2,12 @@
 
 import { createTransaction } from "@/lib/queries";
 import { parseDate, parsePositiveInt } from "@/lib/validate";
+import { requireSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function ajouterTransaction(formData: FormData) {
+  await requireSession();
   const date = parseDate(formData.get("date"));
   const montant = parsePositiveInt(formData.get("montant"));
   const type = formData.get("type");

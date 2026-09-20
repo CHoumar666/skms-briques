@@ -2,7 +2,6 @@ import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import { formatDate, formatMontant, todayISO } from "@/lib/format";
 import { listVentesParDate } from "@/lib/queries";
-import { deconnexionAdmin } from "../actions";
 
 // Dépend de la date du jour et des ventes live : jamais de mise en cache statique.
 export const dynamic = "force-dynamic";
@@ -18,13 +17,6 @@ export default function VentesDuJourPage() {
       <PageHeader
         title="Ventes du jour"
         subtitle={`Ventes enregistrées le ${formatDate(today)}`}
-        action={
-          <form action={deconnexionAdmin}>
-            <button type="submit" className="text-sm text-slate-500 hover:text-slate-700">
-              Se déconnecter
-            </button>
-          </form>
-        }
       />
 
       <div className="p-8 space-y-6">

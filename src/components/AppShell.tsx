@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
 import CookieBanner from "./CookieBanner";
@@ -8,6 +9,9 @@ import { siteConfig } from "@/lib/site";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  if (pathname === "/connexion") return <>{children}</>;
 
   return (
     <div className="flex min-h-screen w-full">

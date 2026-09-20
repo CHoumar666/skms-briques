@@ -11,9 +11,6 @@ export default function Footer() {
       <Link href="/cgu" className="hover:text-slate-600 hover:underline">
         Conditions générales d&apos;utilisation
       </Link>
-      <Link href="/admin/ventes-du-jour" className="ml-auto hover:text-slate-600 hover:underline">
-        Espace administrateur
-      </Link>
     </footer>
   );
 }

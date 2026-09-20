@@ -1,8 +1,8 @@
 const COOKIE_NAME = "admin_session";
 const SESSION_DURATION_MS = 12 * 60 * 60 * 1000;
 
-export const ADMIN_SESSION_COOKIE = COOKIE_NAME;
-export const ADMIN_SESSION_MAX_AGE_SECONDS = SESSION_DURATION_MS / 1000;
+export const SESSION_COOKIE = COOKIE_NAME;
+export const SESSION_MAX_AGE_SECONDS = SESSION_DURATION_MS / 1000;
 
 function toHex(buffer: ArrayBuffer): string {
   return Array.from(new Uint8Array(buffer))
