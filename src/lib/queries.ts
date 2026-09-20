@@ -21,14 +21,15 @@ export function createClient(nom: string, telephone: string, adresse: string) {
     .run(nom, telephone || null, adresse || null);
 }
 
-export type LivraisonAvecFournisseur = Livraison & { fournisseur_nom: string | null };
+export type LivraisonAvecFournisseur = Livraison & { fournisseur_nom: string | null; saisi_par: string | null };
 
 export function listLivraisons(): LivraisonAvecFournisseur[] {
   return db
     .prepare(
-      `SELECT l.*, f.nom as fournisseur_nom
+      `SELECT l.*, f.nom as fournisseur_nom, u.username as saisi_par
        FROM livraisons l
        LEFT JOIN fournisseurs f ON f.id = l.fournisseur_id
+       LEFT JOIN users u ON u.id = l.created_by
        ORDER BY l.date DESC, l.id DESC`
     )
     .all() as LivraisonAvecFournisseur[];
@@ -40,29 +41,32 @@ export function createLivraison(input: {
   quantite: number;
   prix_unitaire: number;
   notes: string;
+  created_by: number;
 }) {
   return db
     .prepare(
-      `INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.date,
       input.fournisseur_id,
       input.quantite,
       input.prix_unitaire,
-      input.notes || null
+      input.notes || null,
+      input.created_by
     );
 }
 
-export type VenteAvecClient = Vente & { client_nom: string | null };
+export type VenteAvecClient = Vente & { client_nom: string | null; saisi_par: string | null };
 
 export function listVentes(): VenteAvecClient[] {
   return db
     .prepare(
-      `SELECT v.*, c.nom as client_nom
+      `SELECT v.*, c.nom as client_nom, u.username as saisi_par
        FROM ventes v
        LEFT JOIN clients c ON c.id = v.client_id
+       LEFT JOIN users u ON u.id = v.created_by
        ORDER BY v.date DESC, v.id DESC`
     )
     .all() as VenteAvecClient[];
@@ -71,9 +75,10 @@ export function listVentes(): VenteAvecClient[] {
 export function listVentesParDate(date: string): VenteAvecClient[] {
   return db
     .prepare(
-      `SELECT v.*, c.nom as client_nom
+      `SELECT v.*, c.nom as client_nom, u.username as saisi_par
        FROM ventes v
        LEFT JOIN clients c ON c.id = v.client_id
+       LEFT JOIN users u ON u.id = v.created_by
        WHERE v.date = ?
        ORDER BY v.id DESC`
     )
@@ -88,9 +93,10 @@ export type VenteAvecClientDetail = VenteAvecClient & {
 export function getVente(id: number): VenteAvecClientDetail | undefined {
   return db
     .prepare(
-      `SELECT v.*, c.nom as client_nom, c.telephone as client_telephone, c.adresse as client_adresse
+      `SELECT v.*, c.nom as client_nom, c.telephone as client_telephone, c.adresse as client_adresse, u.username as saisi_par
        FROM ventes v
        LEFT JOIN clients c ON c.id = v.client_id
+       LEFT JOIN users u ON u.id = v.created_by
        WHERE v.id = ?`
     )
     .get(id) as VenteAvecClientDetail | undefined;
@@ -102,23 +108,33 @@ export function createVente(input: {
   quantite: number;
   prix_unitaire: number;
   notes: string;
+  created_by: number;
 }) {
   return db
     .prepare(
-      `INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.date,
       input.client_id,
       input.quantite,
       input.prix_unitaire,
-      input.notes || null
+      input.notes || null,
+      input.created_by
     );
 }
 
-export function listTransactions(): Transaction[] {
-  return db.prepare("SELECT * FROM transactions ORDER BY date DESC, id DESC").all() as Transaction[];
+export type TransactionAvecAuteur = Transaction & { saisi_par: string | null };
+
+export function listTransactions(): TransactionAvecAuteur[] {
+  return db
+    .prepare(
+      `SELECT t.*, u.username as saisi_par FROM transactions t
+       LEFT JOIN users u ON u.id = t.created_by
+       ORDER BY t.date DESC, t.id DESC`
+    )
+    .all() as TransactionAvecAuteur[];
 }
 
 export function createTransaction(input: {
@@ -127,17 +143,39 @@ export function createTransaction(input: {
   categorie: string;
   montant: number;
   description: string;
+  created_by: number;
 }) {
   return db
     .prepare(
-      `INSERT INTO transactions (date, type, categorie, montant, description)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO transactions (date, type, categorie, montant, description, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(input.date, input.type, input.categorie, input.montant, input.description || null);
+    .run(input.date, input.type, input.categorie, input.montant, input.description || null, input.created_by);
+}
+
+export type SourceOperation = "livraison" | "vente" | "transaction";
+const TABLES: Record<SourceOperation, string> = { livraison: "livraisons", vente: "ventes", transaction: "transactions" };
+
+export function supprimerOperation(source: SourceOperation, id: number, userId: number): boolean {
+  const table = TABLES[source];
+  const ligne = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+  if (!ligne) return false;
+  db.transaction(() => {
+    db.prepare("INSERT INTO audit_log (user_id, action, detail) VALUES (?, ?, ?)").run(
+      userId,
+      `suppression_${source}`,
+      JSON.stringify(ligne)
+    );
+    db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
+  })();
+  return true;
 }
 
 export type LigneComptable = {
   id: string;
+  source: SourceOperation;
+  refId: number;
+  saisi_par: string | null;
   date: string;
   type: "depense" | "revenu";
   categorie: string;
@@ -151,6 +189,9 @@ export function getLedger(): LigneComptable[] {
   for (const l of listLivraisons()) {
     lignes.push({
       id: `livraison-${l.id}`,
+      source: "livraison",
+      refId: l.id,
+      saisi_par: l.saisi_par,
       date: l.date,
       type: "depense",
       categorie: "Achat briques",
@@ -162,6 +203,9 @@ export function getLedger(): LigneComptable[] {
   for (const v of listVentes()) {
     lignes.push({
       id: `vente-${v.id}`,
+      source: "vente",
+      refId: v.id,
+      saisi_par: v.saisi_par,
       date: v.date,
       type: "revenu",
       categorie: "Vente briques",
@@ -173,6 +217,9 @@ export function getLedger(): LigneComptable[] {
   for (const t of listTransactions()) {
     lignes.push({
       id: `transaction-${t.id}`,
+      source: "transaction",
+      refId: t.id,
+      saisi_par: t.saisi_par,
       date: t.date,
       type: t.type,
       categorie: t.categorie,

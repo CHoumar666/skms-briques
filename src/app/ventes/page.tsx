@@ -52,6 +52,7 @@ export default async function VentesPage({
                   <th className="px-5 py-3 font-medium text-right">Quantité</th>
                   <th className="px-5 py-3 font-medium text-right">Prix unitaire</th>
                   <th className="px-5 py-3 font-medium text-right">Total</th>
+                  <th className="px-5 py-3 font-medium">Saisi par</th>
                   <th className="px-5 py-3 font-medium">Reçu</th>
                 </tr>
               </thead>
@@ -65,6 +66,7 @@ export default async function VentesPage({
                     <td className="px-5 py-3 text-right font-medium">
                       {formatMontant(v.quantite * v.prix_unitaire)}
                     </td>
+                    <td className="px-5 py-3 text-slate-500">{v.saisi_par ?? "—"}</td>
                     <td className="px-5 py-3">
                       <Link href={`/recus/${v.id}`} className="text-orange-600 hover:underline">
                         Voir le reçu

@@ -3,6 +3,8 @@ import StatCard from "@/components/StatCard";
 import { formatDate, formatMontant } from "@/lib/format";
 import { getLedger, getStats } from "@/lib/queries";
 import TransactionForm from "./TransactionForm";
+import { requireUser } from "@/lib/session";
+import { supprimerLigne } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,8 @@ export default async function ComptabilitePage({
 }: {
   searchParams: Promise<{ erreur?: string }>;
 }) {
+  const user = await requireUser();
+  const estProprietaire = user.role === "proprietaire";
   const params = await searchParams;
   const stats = getStats();
   const ledger = getLedger();
@@ -41,8 +45,11 @@ export default async function ComptabilitePage({
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-200">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
             <h2 className="font-semibold text-slate-900">Journal des opérations</h2>
+            <a href="/comptabilite/export" className="text-sm text-orange-700 hover:underline">
+              Exporter en CSV (Excel)
+            </a>
           </div>
 
           {ledger.length === 0 ? (
@@ -56,7 +63,9 @@ export default async function ComptabilitePage({
                   <th className="px-5 py-3 font-medium">Type</th>
                   <th className="px-5 py-3 font-medium">Catégorie</th>
                   <th className="px-5 py-3 font-medium">Description</th>
+                  <th className="px-5 py-3 font-medium">Saisi par</th>
                   <th className="px-5 py-3 font-medium text-right">Montant</th>
+                  {estProprietaire && <th className="px-5 py-3 font-medium"><span className="sr-only">Actions</span></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -76,6 +85,7 @@ export default async function ComptabilitePage({
                     </td>
                     <td className="px-5 py-3">{ligne.categorie}</td>
                     <td className="px-5 py-3 text-slate-500">{ligne.description ?? ""}</td>
+                    <td className="px-5 py-3 text-slate-500">{ligne.saisi_par ?? "—"}</td>
                     <td
                       className={`px-5 py-3 text-right font-medium ${
                         ligne.type === "revenu" ? "text-emerald-600" : "text-red-600"
@@ -84,6 +94,15 @@ export default async function ComptabilitePage({
                       {ligne.type === "revenu" ? "+" : "-"}
                       {formatMontant(ligne.montant)}
                     </td>
+                    {estProprietaire && (
+                      <td className="px-5 py-3">
+                        <form action={supprimerLigne}>
+                          <input type="hidden" name="source" value={ligne.source} />
+                          <input type="hidden" name="id" value={ligne.refId} />
+                          <button type="submit" className="text-red-700 hover:underline">Supprimer</button>
+                        </form>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

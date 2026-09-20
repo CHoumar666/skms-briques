@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function ajouterVente(formData: FormData) {
-  await requireUser();
+  const user = await requireUser();
   const date = parseDate(formData.get("date"));
   const quantite = parsePositiveInt(formData.get("quantite"));
   const prixUnitaire = parseNonNegativeInt(formData.get("prix_unitaire"));
@@ -25,6 +25,7 @@ export async function ajouterVente(formData: FormData) {
   }
 
   const result = createVente({
+    created_by: user.id,
     date,
     client_id: clientId ? Number(clientId) : null,
     quantite,

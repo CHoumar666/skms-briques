@@ -63,6 +63,25 @@ db.exec(`
   );
 `);
 
+function ajouterColonne(table: string, colonne: string, definition: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === colonne)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${colonne} ${definition}`);
+}
+
+ajouterColonne("livraisons", "created_by", "INTEGER REFERENCES users(id)");
+ajouterColonne("ventes", "created_by", "INTEGER REFERENCES users(id)");
+ajouterColonne("transactions", "created_by", "INTEGER REFERENCES users(id)");
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER REFERENCES users(id),
+    action TEXT NOT NULL,
+    detail TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 export default db;
 
 export type Fournisseur = {
