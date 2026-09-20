@@ -1,3 +1,4 @@
+import { libelleModele } from "@/lib/modeles";
 import { requireUser } from "@/lib/session";
 import PrintButton from "@/components/PrintButton";
 import { formatDate, formatMontant } from "@/lib/format";
@@ -61,7 +62,7 @@ export default async function RecuPage({ params }: { params: Promise<{ id: strin
           <tbody>
             <tr className="border-t border-slate-100">
               <td className="py-3">
-                Briques
+                Briques {libelleModele(vente.modele)}
                 {vente.notes && <span className="block text-slate-500">{vente.notes}</span>}
               </td>
               <td className="py-3 text-right">{vente.quantite.toLocaleString("fr-FR")}</td>

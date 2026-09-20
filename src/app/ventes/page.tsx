@@ -1,7 +1,8 @@
+import { libelleModele } from "@/lib/modeles";
 import { requireUser } from "@/lib/session";
 import PageHeader from "@/components/PageHeader";
 import { formatDate, formatMontant } from "@/lib/format";
-import { listClients, listVentes } from "@/lib/queries";
+import { getStockParModele, listClients, listVentes } from "@/lib/queries";
 import VenteForm from "./VenteForm";
 import Link from "next/link";
 
@@ -10,12 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function VentesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erreur?: string }>;
+  searchParams: Promise<{ erreur?: string; modele?: string }>;
 }) {
   await requireUser();
   const params = await searchParams;
   const ventes = listVentes();
   const clients = listClients();
+  const stockModeles = getStockParModele();
   const totalQuantite = ventes.reduce((sum, v) => sum + v.quantite, 0);
   const totalMontant = ventes.reduce((sum, v) => sum + v.quantite * v.prix_unitaire, 0);
 
@@ -26,11 +28,19 @@ export default async function VentesPage({
       <div className="p-8 space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="font-semibold text-slate-900 mb-4">Enregistrer une vente</h2>
-          {params.erreur && (
+          {params.erreur === "stock" && (
             <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-              Valeurs invalides : vérifiez la date, la quantité (&gt; 0) et le prix unitaire.
+              Stock insuffisant pour ce modèle. Stock disponible : {stockModeles.map((m) => `${m.label} : ${m.stock.toLocaleString("fr-FR")}`).join(" · ")}. Enregistre d&apos;abord la livraison correspondante.
             </p>
           )}
+          {params.erreur && params.erreur !== "stock" && (
+            <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              Valeurs invalides : vérifiez la date, le modèle, la quantité (&gt; 0) et le prix unitaire.
+            </p>
+          )}
+          <p className="mb-4 text-sm text-slate-600">
+            Stock : {stockModeles.map((m) => `${m.label} : ${m.stock.toLocaleString("fr-FR")}`).join(" · ")}
+          </p>
           <VenteForm clients={clients} />
         </div>
 
@@ -51,6 +61,7 @@ export default async function VentesPage({
                 <tr>
                   <th className="px-5 py-3 font-medium">Date</th>
                   <th className="px-5 py-3 font-medium">Client</th>
+                  <th className="px-5 py-3 font-medium">Modèle</th>
                   <th className="px-5 py-3 font-medium text-right">Quantité</th>
                   <th className="px-5 py-3 font-medium text-right">Prix unitaire</th>
                   <th className="px-5 py-3 font-medium text-right">Total</th>
@@ -64,6 +75,7 @@ export default async function VentesPage({
                   <tr key={v.id}>
                     <td className="px-5 py-3 whitespace-nowrap">{formatDate(v.date)}</td>
                     <td className="px-5 py-3">{v.client_nom ?? "—"}</td>
+                    <td className="px-5 py-3">{libelleModele(v.modele)}</td>
                     <td className="px-5 py-3 text-right">{v.quantite.toLocaleString("fr-FR")}</td>
                     <td className="px-5 py-3 text-right">{formatMontant(v.prix_unitaire)}</td>
                     <td className="px-5 py-3 text-right font-medium">

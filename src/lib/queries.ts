@@ -1,4 +1,5 @@
 import "server-only";
+import { MODELES, libelleModele } from "./modeles";
 import db, { Client, Fournisseur, Livraison, StatutLivraison, StatutVente, Transaction, Vente } from "./db";
 
 export function listFournisseurs(): Fournisseur[] {
@@ -42,12 +43,13 @@ export function createLivraison(input: {
   prix_unitaire: number;
   notes: string;
   created_by: number;
+  modele: string;
   statut_paiement: StatutLivraison;
 }) {
   return db
     .prepare(
-      `INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes, created_by, statut_paiement)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes, created_by, statut_paiement, modele)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.date,
@@ -56,7 +58,8 @@ export function createLivraison(input: {
       input.prix_unitaire,
       input.notes || null,
       input.created_by,
-      input.statut_paiement
+      input.statut_paiement,
+      input.modele
     );
 }
 
@@ -111,12 +114,13 @@ export function createVente(input: {
   prix_unitaire: number;
   notes: string;
   created_by: number;
+  modele: string;
   statut_paiement: StatutVente;
 }) {
   return db
     .prepare(
-      `INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes, created_by, statut_paiement)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes, created_by, statut_paiement, modele)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.date,
@@ -124,7 +128,9 @@ export function createVente(input: {
       input.quantite,
       input.prix_unitaire,
       input.notes || null,
-      input.created_by
+      input.created_by,
+      input.statut_paiement,
+      input.modele
     );
 }
 
@@ -216,7 +222,7 @@ export function getLedger(): LigneComptable[] {
       saisi_par: l.saisi_par,
       date: l.date,
       type: "depense",
-      categorie: "Achat briques",
+      categorie: `Achat briques ${libelleModele(l.modele)}`,
       montant: l.quantite * l.prix_unitaire,
       description: l.fournisseur_nom ? `Fournisseur: ${l.fournisseur_nom}` : l.notes,
       statut: l.statut_paiement,
@@ -232,7 +238,7 @@ export function getLedger(): LigneComptable[] {
       saisi_par: v.saisi_par,
       date: v.date,
       type: "revenu",
-      categorie: "Vente briques",
+      categorie: `Vente briques ${libelleModele(v.modele)}`,
       montant: v.quantite * v.prix_unitaire,
       description: v.client_nom ? `Client: ${v.client_nom}` : v.notes,
       statut: v.statut_paiement,
@@ -283,4 +289,21 @@ export function getStats() {
     aPayer,
     aEncaisser,
   };
+}
+
+export type StockModele = { id: string; label: string; stock: number };
+
+export function getStockParModele(): StockModele[] {
+  const entrees = db.prepare("SELECT modele, COALESCE(SUM(quantite), 0) AS q FROM livraisons GROUP BY modele").all() as { modele: string | null; q: number }[];
+  const sorties = db.prepare("SELECT modele, COALESCE(SUM(quantite), 0) AS q FROM ventes GROUP BY modele").all() as { modele: string | null; q: number }[];
+  const q = (rows: { modele: string | null; q: number }[], id: string | null) => rows.find((r) => r.modele === id)?.q ?? 0;
+
+  const resultat: StockModele[] = MODELES.map((m) => ({ id: m.id, label: m.label, stock: q(entrees, m.id) - q(sorties, m.id) }));
+  const ancien = q(entrees, null) - q(sorties, null);
+  if (ancien !== 0) resultat.push({ id: "ancien", label: "Non précisé", stock: ancien });
+  return resultat;
+}
+
+export function getStockModele(modele: string): number {
+  return getStockParModele().find((m) => m.id === modele)?.stock ?? 0;
 }

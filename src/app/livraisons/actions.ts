@@ -2,6 +2,7 @@
 
 import { createFournisseur, createLivraison } from "@/lib/queries";
 import { parseDate, parseNonNegativeInt, parsePositiveInt } from "@/lib/validate";
+import { estModele } from "@/lib/modeles";
 import { requireUser } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -10,13 +11,14 @@ export async function ajouterLivraison(formData: FormData) {
   const user = await requireUser();
   const date = parseDate(formData.get("date"));
   const quantite = parsePositiveInt(formData.get("quantite"));
+  const modele = formData.get("modele");
   const statut = formData.get("statut_paiement");
   const statutValide = statut === "paye" || statut === "a_payer" || statut === "sans_paiement";
   const prixSaisi = formData.get("prix_unitaire");
   const prixUnitaire =
     statut === "sans_paiement" && (prixSaisi === null || prixSaisi === "") ? 0 : parseNonNegativeInt(prixSaisi);
 
-  if (!date || quantite === null || prixUnitaire === null || !statutValide) {
+  if (!date || quantite === null || prixUnitaire === null || !statutValide || !estModele(modele)) {
     redirect("/livraisons?erreur=1");
   }
 
@@ -31,6 +33,7 @@ export async function ajouterLivraison(formData: FormData) {
   createLivraison({
     created_by: user.id,
     statut_paiement: statut,
+    modele,
     date,
     fournisseur_id: fournisseurId ? Number(fournisseurId) : null,
     quantite,

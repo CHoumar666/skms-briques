@@ -71,6 +71,8 @@ function ajouterColonne(table: string, colonne: string, definition: string) {
 ajouterColonne("livraisons", "created_by", "INTEGER REFERENCES users(id)");
 ajouterColonne("ventes", "created_by", "INTEGER REFERENCES users(id)");
 ajouterColonne("transactions", "created_by", "INTEGER REFERENCES users(id)");
+ajouterColonne("livraisons", "modele", "TEXT");
+ajouterColonne("ventes", "modele", "TEXT");
 ajouterColonne("livraisons", "statut_paiement", "TEXT NOT NULL DEFAULT 'paye'");
 ajouterColonne("ventes", "statut_paiement", "TEXT NOT NULL DEFAULT 'paye'");
 
@@ -106,6 +108,7 @@ export type Livraison = {
   quantite: number;
   prix_unitaire: number;
   notes: string | null;
+  modele: string | null;
   statut_paiement: StatutLivraison;
   created_at: string;
 };
@@ -117,6 +120,7 @@ export type Vente = {
   quantite: number;
   prix_unitaire: number;
   notes: string | null;
+  modele: string | null;
   statut_paiement: StatutVente;
   created_at: string;
 };

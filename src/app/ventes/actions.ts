@@ -1,7 +1,8 @@
 "use server";
 
-import { createClient, createVente } from "@/lib/queries";
+import { createClient, createVente, getStockModele } from "@/lib/queries";
 import { parseDate, parseNonNegativeInt, parsePositiveInt } from "@/lib/validate";
+import { estModele } from "@/lib/modeles";
 import { requireUser } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -12,10 +13,15 @@ export async function ajouterVente(formData: FormData) {
   const quantite = parsePositiveInt(formData.get("quantite"));
   const prixUnitaire = parseNonNegativeInt(formData.get("prix_unitaire"));
 
+  const modele = formData.get("modele");
   const statut = formData.get("statut_paiement");
 
-  if (!date || quantite === null || prixUnitaire === null || (statut !== "paye" && statut !== "a_encaisser")) {
+  if (!date || quantite === null || prixUnitaire === null || (statut !== "paye" && statut !== "a_encaisser") || !estModele(modele)) {
     redirect("/ventes?erreur=1");
+  }
+
+  if (quantite > getStockModele(modele)) {
+    redirect(`/ventes?erreur=stock&modele=${modele}`);
   }
 
   let clientId = formData.get("client_id") as string;
@@ -29,6 +35,7 @@ export async function ajouterVente(formData: FormData) {
   const result = createVente({
     created_by: user.id,
     statut_paiement: statut,
+    modele,
     date,
     client_id: clientId ? Number(clientId) : null,
     quantite,

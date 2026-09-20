@@ -1,7 +1,7 @@
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import { formatDate, formatMontant, todayISO } from "@/lib/format";
-import { getStats, listLivraisons, listVentes, listVentesParDate } from "@/lib/queries";
+import { getStockParModele, getStats, listLivraisons, listVentes, listVentesParDate } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
 import Link from "next/link";
 
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function TableauDeBordPage() {
   const user = await requireUser();
   const stats = getStats();
+  const stockModeles = getStockParModele();
   const livraisons = listLivraisons();
   const ventes = listVentes();
   const dernieresLivraisons = livraisons.slice(0, 5);
@@ -27,6 +28,11 @@ export default async function TableauDeBordPage() {
           subtitle={`Espace du personnel — ${formatDate(today)}`}
         />
         <div className="p-8 space-y-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {stockModeles.map((m) => (
+              <StatCard key={m.id} label={`Stock ${m.label}`} value={m.stock.toLocaleString("fr-FR")} />
+            ))}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard label="Stock de briques" value={stats.stockBriques.toLocaleString("fr-FR")} />
             <StatCard label="Ventes saisies aujourd'hui" value={String(ventesDuJour.length)} />
@@ -87,6 +93,11 @@ export default async function TableauDeBordPage() {
           <StatCard label="Argent encaissé" value={formatMontant(stats.argentEncaisse)} tone="positive" />
           <StatCard label="Argent sorti" value={formatMontant(stats.argentSorti)} tone="negative" />
           <StatCard label="Solde en caisse" value={formatMontant(stats.soldeCaisse)} tone={stats.soldeCaisse >= 0 ? "positive" : "negative"} />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stockModeles.map((m) => (
+            <StatCard key={m.id} label={`Stock ${m.label}`} value={m.stock.toLocaleString("fr-FR")} />
+          ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <StatCard label="À payer aux fournisseurs" value={formatMontant(stats.aPayer)} />

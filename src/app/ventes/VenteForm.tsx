@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ajouterVente } from "./actions";
+import { MODELES } from "@/lib/modeles";
 import type { Client } from "@/lib/db";
 
 export default function VenteForm({ clients }: { clients: Client[] }) {
@@ -88,7 +89,7 @@ export default function VenteForm({ clients }: { clients: Client[] }) {
         Enregistrer & générer le reçu
       </button>
 
-      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-4">
+      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-2">
         <label className="text-sm font-medium text-slate-700">Notes (optionnel)</label>
         <input
           type="text"
@@ -96,6 +97,22 @@ export default function VenteForm({ clients }: { clients: Client[] }) {
           placeholder="Ex: livraison chantier X..."
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
         />
+      </div>
+
+      <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-2">
+        <label htmlFor="modele" className="text-sm font-medium text-slate-700">Modèle de brique</label>
+        <select
+          id="modele"
+          name="modele"
+          required
+          defaultValue=""
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+        >
+          <option value="" disabled>Choisir le modèle...</option>
+          {MODELES.map((m) => (
+            <option key={m.id} value={m.id}>{m.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-2">

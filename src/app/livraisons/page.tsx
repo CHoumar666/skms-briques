@@ -1,3 +1,4 @@
+import { libelleModele } from "@/lib/modeles";
 import { requireUser } from "@/lib/session";
 import PageHeader from "@/components/PageHeader";
 import { formatDate, formatMontant } from "@/lib/format";
@@ -53,6 +54,7 @@ export default async function LivraisonsPage({
                 <tr>
                   <th className="px-5 py-3 font-medium">Date</th>
                   <th className="px-5 py-3 font-medium">Fournisseur</th>
+                  <th className="px-5 py-3 font-medium">Modèle</th>
                   <th className="px-5 py-3 font-medium text-right">Quantité</th>
                   <th className="px-5 py-3 font-medium text-right">Prix unitaire</th>
                   <th className="px-5 py-3 font-medium text-right">Total</th>
@@ -66,6 +68,7 @@ export default async function LivraisonsPage({
                   <tr key={l.id}>
                     <td className="px-5 py-3 whitespace-nowrap">{formatDate(l.date)}</td>
                     <td className="px-5 py-3">{l.fournisseur_nom ?? "—"}</td>
+                    <td className="px-5 py-3">{libelleModele(l.modele)}</td>
                     <td className="px-5 py-3 text-right">{l.quantite.toLocaleString("fr-FR")}</td>
                     <td className="px-5 py-3 text-right">{formatMontant(l.prix_unitaire)}</td>
                     <td className="px-5 py-3 text-right font-medium">

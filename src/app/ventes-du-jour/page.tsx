@@ -1,3 +1,4 @@
+import { libelleModele } from "@/lib/modeles";
 import { requireOwner } from "@/lib/session";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
@@ -45,6 +46,7 @@ export default async function VentesDuJourPage() {
               <thead className="bg-slate-50 text-slate-500 text-left">
                 <tr>
                   <th className="px-5 py-3 font-medium">Client</th>
+                  <th className="px-5 py-3 font-medium">Modèle</th>
                   <th className="px-5 py-3 font-medium text-right">Quantité</th>
                   <th className="px-5 py-3 font-medium text-right">Prix unitaire</th>
                   <th className="px-5 py-3 font-medium text-right">Total</th>
@@ -54,6 +56,7 @@ export default async function VentesDuJourPage() {
                 {ventes.map((v) => (
                   <tr key={v.id}>
                     <td className="px-5 py-3">{v.client_nom ?? "Client au comptant"}</td>
+                    <td className="px-5 py-3">{libelleModele(v.modele)}</td>
                     <td className="px-5 py-3 text-right">{v.quantite.toLocaleString("fr-FR")}</td>
                     <td className="px-5 py-3 text-right">{formatMontant(v.prix_unitaire)}</td>
                     <td className="px-5 py-3 text-right font-medium">
