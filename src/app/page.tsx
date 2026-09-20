@@ -31,11 +31,6 @@ const usages = [
   { label: "Clôtures et aménagements", icone: "M4 21V8l2-2 2 2v13M10 21V8l2-2 2 2v13M16 21V8l2-2 2 2v13M3 12h18M3 17h18" },
 ];
 
-const briques =
-  "repeating-linear-gradient(0deg, rgba(120,30,5,.35) 0 3px, transparent 3px 46px), " +
-  "repeating-linear-gradient(90deg, rgba(120,30,5,.35) 0 3px, transparent 3px 92px), " +
-  "linear-gradient(135deg, #e2531f, #c2410c)";
-
 export default async function AccueilPage() {
   const user = await getCurrentUser();
 
@@ -43,11 +38,25 @@ export default async function AccueilPage() {
     <main className="bg-white text-slate-900">
       <section className="relative overflow-hidden bg-gradient-to-b from-sky-300 via-sky-100 to-white">
         <div
-          aria-hidden="true"
-          className="absolute inset-y-0 right-0 hidden w-3/5 lg:block"
-          style={{ backgroundImage: `url(/hero-briques.jpg), ${briques}`, backgroundSize: "cover, 92px 46px", backgroundPosition: "center" }}
-        />
-        <div aria-hidden="true" className="absolute inset-0 hidden bg-gradient-to-r from-white via-white/85 to-transparent lg:block" />
+          role="img"
+          aria-label="Pile de briques rouges en terre cuite sur un chantier, SKMS Brique"
+          className="absolute bottom-0 right-0 hidden aspect-[754/530] w-[62%] lg:block"
+          style={{
+            backgroundImage: "url(/hero-briques.jpg)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            maskImage: "linear-gradient(to right, transparent 0, black 28%), linear-gradient(to bottom, transparent 0, black 22%)",
+            maskComposite: "intersect",
+            WebkitMaskImage: "linear-gradient(to right, transparent 0, black 28%), linear-gradient(to bottom, transparent 0, black 22%)",
+            WebkitMaskComposite: "source-in",
+          }}
+        >
+          <span className="absolute bottom-8 right-8 rounded-lg bg-slate-900/90 px-5 py-3 text-right text-white shadow-lg">
+            <span className="block text-4xl font-black tracking-widest">SKMS</span>
+            <span className="block text-sm font-semibold tracking-[0.3em] text-orange-400">BRIQUE</span>
+          </span>
+        </div>
+        <div aria-hidden="true" className="absolute inset-y-0 left-0 hidden w-1/2 bg-gradient-to-r from-white via-white/80 to-transparent lg:block" />
 
         <div className="relative mx-auto max-w-6xl px-6 py-10 lg:py-14">
           <div className="flex flex-wrap items-start justify-between gap-6">
@@ -61,6 +70,7 @@ export default async function AccueilPage() {
                 <path d="M2 50c14-6 44-6 60 0" stroke="#0f172a" strokeWidth="3.500" strokeLinecap="round" />
               </svg>
               <div>
+                <p className="text-sm font-black tracking-[0.35em] text-slate-900">SKMS BRIQUE</p>
                 <p className="text-2xl font-extrabold leading-tight">Des briques solides</p>
                 <p className="text-2xl italic text-orange-700 leading-tight">pour vos projets</p>
               </div>
@@ -104,10 +114,15 @@ export default async function AccueilPage() {
 
           <div
             role="img"
-            aria-label="Pile de briques rouges en terre cuite sur un chantier"
-            className="mt-12 h-64 rounded-2xl lg:hidden"
-            style={{ backgroundImage: `url(/hero-briques.jpg), ${briques}`, backgroundSize: "cover, 92px 46px", backgroundPosition: "center" }}
-          />
+            aria-label="Pile de briques rouges en terre cuite sur un chantier, SKMS Brique"
+            className="relative mt-12 aspect-[754/530] w-full overflow-hidden rounded-2xl lg:hidden"
+            style={{ backgroundImage: "url(/hero-briques.jpg)", backgroundSize: "cover", backgroundPosition: "center" }}
+          >
+            <span className="absolute bottom-4 right-4 rounded-lg bg-slate-900/90 px-4 py-2 text-right text-white shadow-lg">
+              <span className="block text-2xl font-black tracking-widest">SKMS</span>
+              <span className="block text-xs font-semibold tracking-[0.3em] text-orange-400">BRIQUE</span>
+            </span>
+          </div>
         </div>
       </section>
 
