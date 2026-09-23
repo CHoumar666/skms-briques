@@ -17,7 +17,7 @@ export async function ajouterTransaction(formData: FormData) {
     redirect("/comptabilite?erreur=1");
   }
 
-  createTransaction({
+  await createTransaction({
     created_by: user.id,
     date,
     type,
@@ -35,7 +35,7 @@ export async function supprimerLigne(formData: FormData) {
   const source = formData.get("source");
   const id = Number(formData.get("id"));
   if ((source === "livraison" || source === "vente" || source === "transaction") && Number.isInteger(id)) {
-    supprimerOperation(source as SourceOperation, id, user.id);
+    await supprimerOperation(source as SourceOperation, id, user.id);
   }
   revalidatePath("/comptabilite");
   revalidatePath("/tableau-de-bord");
@@ -47,7 +47,7 @@ export async function changerPaiement(formData: FormData) {
   const id = Number(formData.get("id"));
   const statut = String(formData.get("statut") ?? "");
   if ((source === "livraison" || source === "vente") && Number.isInteger(id)) {
-    setStatutPaiement(source, id, statut, user.id);
+    await setStatutPaiement(source, id, statut, user.id);
   }
   revalidatePath("/comptabilite");
   revalidatePath("/tableau-de-bord");

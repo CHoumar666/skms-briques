@@ -22,7 +22,7 @@ export default async function EquipePage({
 }) {
   await requireOwner();
   const params = await searchParams;
-  const users = listUsers();
+  const users = await listUsers();
 
   return (
     <div>

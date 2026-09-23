@@ -15,9 +15,9 @@ export async function creerPersonnel(formData: FormData) {
 
   if (!USERNAME_RE.test(username)) redirect("/equipe?erreur=identifiant");
   if (password.length < 10) redirect("/equipe?erreur=motdepasse");
-  if (getUserByUsername(username)) redirect("/equipe?erreur=existe");
+  if (await getUserByUsername(username)) redirect("/equipe?erreur=existe");
 
-  createUser(username, await hashPassword(password), "personnel");
+  await createUser(username, await hashPassword(password), "personnel");
   revalidatePath("/equipe");
   redirect("/equipe?ok=cree");
 }
@@ -26,7 +26,7 @@ export async function basculerPersonnel(formData: FormData) {
   await requireOwner();
   const id = Number(formData.get("id"));
   const actif = formData.get("actif") === "1";
-  if (Number.isInteger(id)) setUserActif(id, actif);
+  if (Number.isInteger(id)) await setUserActif(id, actif);
   revalidatePath("/equipe");
 }
 
@@ -35,7 +35,7 @@ export async function changerMotDePasse(formData: FormData) {
   const id = Number(formData.get("id"));
   const password = (formData.get("password") as string) ?? "";
   if (!Number.isInteger(id) || password.length < 10) redirect("/equipe?erreur=motdepasse");
-  setUserPassword(id, await hashPassword(password));
+  await setUserPassword(id, await hashPassword(password));
   revalidatePath("/equipe");
   redirect("/equipe?ok=modifie");
 }

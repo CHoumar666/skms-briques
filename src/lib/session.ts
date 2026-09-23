@@ -9,8 +9,8 @@ export async function getCurrentUser(): Promise<User | null> {
   const cookieStore = await cookies();
   const payload = await verifySessionToken(cookieStore.get(SESSION_COOKIE)?.value);
   if (!payload) return null;
-  const user = getUserById(payload.userId);
-  return user && user.actif === 1 ? user : null;
+  const user = await getUserById(payload.userId);
+  return user && user.actif ? user : null;
 }
 
 export async function requireUser(): Promise<User> {

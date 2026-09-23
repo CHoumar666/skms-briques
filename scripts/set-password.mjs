@@ -1,7 +1,14 @@
 import { createInterface } from "node:readline";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { randomBytes, pbkdf2Sync } from "node:crypto";
-import Database from "better-sqlite3";
+import postgres from "postgres";
+import { loadEnvLocal } from "./load-env.mjs";
+
+loadEnvLocal();
+
+if (!process.env.DATABASE_URL) {
+  console.error("DATABASE_URL n'est pas défini dans .env.local. Colle d'abord l'adresse de connexion Supabase.");
+  process.exit(1);
+}
 
 function ask(question) {
   return new Promise((resolve) => {
@@ -30,18 +37,19 @@ if (password !== (await ask("Confirmer le mot de passe : "))) {
 const salt = randomBytes(16).toString("hex");
 const hash = `${salt}:${pbkdf2Sync(password, Buffer.from(salt, "hex"), 100000, 32, "sha256").toString("hex")}`;
 
-mkdirSync("data", { recursive: true });
-const db = new Database("data/gestion.db");
-db.exec(`CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('proprietaire', 'personnel')), actif INTEGER NOT NULL DEFAULT 1,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')))`);
-const existing = db.prepare("SELECT id FROM users WHERE username = ?").get(username);
-if (existing) db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hash, existing.id);
-else db.prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'proprietaire')").run(username, hash);
+const sql = postgres(process.env.DATABASE_URL, { max: 1 });
 
-const envFile = ".env.local";
-const lines = existsSync(envFile) ? readFileSync(envFile, "utf8").split("\n").filter((l) => l && !l.startsWith("ADMIN_")) : [];
-if (!lines.some((l) => l.startsWith("SESSION_SECRET="))) lines.push(`SESSION_SECRET=${randomBytes(32).toString("hex")}`);
-writeFileSync(envFile, lines.join("\n") + "\n");
-console.log(`Mot de passe enregistré pour "${username}". Redémarre le serveur si besoin.`);
+try {
+  const [existant] = await sql`SELECT id FROM users WHERE username = ${username}`;
+  if (existant) {
+    await sql`UPDATE users SET password_hash = ${hash}, actif = TRUE WHERE id = ${existant.id}`;
+  } else {
+    await sql`INSERT INTO users (username, password_hash, role) VALUES (${username}, ${hash}, 'proprietaire')`;
+  }
+  console.log(`Mot de passe enregistré pour "${username}" sur Supabase.`);
+} catch (err) {
+  console.error("Échec :", err.message);
+  process.exitCode = 1;
+} finally {
+  await sql.end();
+}

@@ -1,92 +1,21 @@
 import "server-only";
-import Database from "better-sqlite3";
-import path from "path";
-import fs from "fs";
+import postgres from "postgres";
 
-const dataDir = path.join(process.cwd(), "data");
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-const db = new Database(path.join(dataDir, "gestion.db"));
-db.pragma("journal_mode = WAL");
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS fournisseurs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nom TEXT NOT NULL,
-    telephone TEXT
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error(
+    "DATABASE_URL n'est pas défini. Colle l'adresse de connexion Supabase dans .env.local (voir README)."
   );
-
-  CREATE TABLE IF NOT EXISTS clients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nom TEXT NOT NULL,
-    telephone TEXT,
-    adresse TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS livraisons (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    fournisseur_id INTEGER REFERENCES fournisseurs(id),
-    quantite INTEGER NOT NULL,
-    prix_unitaire INTEGER NOT NULL,
-    notes TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS ventes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    client_id INTEGER REFERENCES clients(id),
-    quantite INTEGER NOT NULL,
-    prix_unitaire INTEGER NOT NULL,
-    notes TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role TEXT NOT NULL CHECK (role IN ('proprietaire', 'personnel')),
-    actif INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('depense', 'revenu')),
-    categorie TEXT NOT NULL,
-    montant INTEGER NOT NULL,
-    description TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`);
-
-function ajouterColonne(table: string, colonne: string, definition: string) {
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-  if (!cols.some((c) => c.name === colonne)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${colonne} ${definition}`);
 }
 
-ajouterColonne("livraisons", "created_by", "INTEGER REFERENCES users(id)");
-ajouterColonne("ventes", "created_by", "INTEGER REFERENCES users(id)");
-ajouterColonne("transactions", "created_by", "INTEGER REFERENCES users(id)");
-ajouterColonne("livraisons", "modele", "TEXT");
-ajouterColonne("ventes", "modele", "TEXT");
-ajouterColonne("livraisons", "statut_paiement", "TEXT NOT NULL DEFAULT 'paye'");
-ajouterColonne("ventes", "statut_paiement", "TEXT NOT NULL DEFAULT 'paye'");
+// `prepare: false` : compatible avec le pooler transactionnel de Supabase.
+const sql = postgres(connectionString, { prepare: false });
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS audit_log (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER REFERENCES users(id),
-    action TEXT NOT NULL,
-    detail TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`);
+export default sql;
 
-export default db;
+export type StatutLivraison = "paye" | "a_payer" | "sans_paiement";
+export type StatutVente = "paye" | "a_encaisser";
+export type Role = "proprietaire" | "personnel";
 
 export type Fournisseur = {
   id: number;
@@ -110,6 +39,7 @@ export type Livraison = {
   notes: string | null;
   modele: string | null;
   statut_paiement: StatutLivraison;
+  created_by: number | null;
   created_at: string;
 };
 
@@ -122,6 +52,7 @@ export type Vente = {
   notes: string | null;
   modele: string | null;
   statut_paiement: StatutVente;
+  created_by: number | null;
   created_at: string;
 };
 
@@ -132,19 +63,15 @@ export type Transaction = {
   categorie: string;
   montant: number;
   description: string | null;
+  created_by: number | null;
   created_at: string;
 };
-
-export type StatutLivraison = "paye" | "a_payer" | "sans_paiement";
-export type StatutVente = "paye" | "a_encaisser";
-
-export type Role = "proprietaire" | "personnel";
 
 export type User = {
   id: number;
   username: string;
   password_hash: string;
   role: Role;
-  actif: number;
+  actif: boolean;
   created_at: string;
 };

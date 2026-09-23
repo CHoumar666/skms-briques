@@ -1,28 +1,28 @@
 import "server-only";
-import db, { Role, User } from "./db";
+import sql, { Role, User } from "./db";
 
-export function getUserByUsername(username: string): User | undefined {
-  return db.prepare("SELECT * FROM users WHERE username = ?").get(username) as User | undefined;
+export async function getUserByUsername(username: string): Promise<User | undefined> {
+  const [row] = await sql<User[]>`SELECT * FROM users WHERE username = ${username}`;
+  return row;
 }
 
-export function getUserById(id: number): User | undefined {
-  return db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+export async function getUserById(id: number): Promise<User | undefined> {
+  const [row] = await sql<User[]>`SELECT * FROM users WHERE id = ${id}`;
+  return row;
 }
 
-export function listUsers(): User[] {
-  return db.prepare("SELECT * FROM users ORDER BY role DESC, username").all() as User[];
+export async function listUsers(): Promise<User[]> {
+  return sql<User[]>`SELECT * FROM users ORDER BY role DESC, username`;
 }
 
-export function createUser(username: string, passwordHash: string, role: Role) {
-  return db
-    .prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)")
-    .run(username, passwordHash, role);
+export async function createUser(username: string, passwordHash: string, role: Role) {
+  return sql`INSERT INTO users (username, password_hash, role) VALUES (${username}, ${passwordHash}, ${role})`;
 }
 
-export function setUserActif(id: number, actif: boolean) {
-  return db.prepare("UPDATE users SET actif = ? WHERE id = ? AND role = 'personnel'").run(actif ? 1 : 0, id);
+export async function setUserActif(id: number, actif: boolean) {
+  return sql`UPDATE users SET actif = ${actif} WHERE id = ${id} AND role = 'personnel'`;
 }
 
-export function setUserPassword(id: number, passwordHash: string) {
-  return db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, id);
+export async function setUserPassword(id: number, passwordHash: string) {
+  return sql`UPDATE users SET password_hash = ${passwordHash} WHERE id = ${id}`;
 }

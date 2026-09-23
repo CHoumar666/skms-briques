@@ -26,11 +26,11 @@ export async function ajouterLivraison(formData: FormData) {
   const nouveauFournisseur = (formData.get("nouveau_fournisseur") as string)?.trim();
 
   if (!fournisseurId && nouveauFournisseur) {
-    const result = createFournisseur(nouveauFournisseur, "");
-    fournisseurId = String(result.lastInsertRowid);
+    const result = await createFournisseur(nouveauFournisseur, "");
+    fournisseurId = String(result.id);
   }
 
-  createLivraison({
+  await createLivraison({
     created_by: user.id,
     statut_paiement: statut,
     modele,

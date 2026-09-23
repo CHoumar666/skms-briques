@@ -19,18 +19,18 @@ export async function connexion(formData: FormData) {
   const headersList = await headers();
   const ip = headersList.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 
-  if (isRateLimited(ip)) {
+  if (await isRateLimited(ip)) {
     redirect(`/connexion?error=limite&from=${encodeURIComponent(from)}`);
   }
 
-  const user = getUserByUsername(username.trim());
-  const valid = !!user && user.actif === 1 && (await verifyPassword(password, user.password_hash));
+  const user = await getUserByUsername(username.trim());
+  const valid = !!user && user.actif && (await verifyPassword(password, user.password_hash));
   if (!user || !valid) {
-    recordFailedAttempt(ip);
+    await recordFailedAttempt(ip);
     redirect(`/connexion?error=1&from=${encodeURIComponent(from)}`);
   }
 
-  clearAttempts(ip);
+  await clearAttempts(ip);
   const token = await createSessionToken({ userId: user.id, role: user.role });
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {

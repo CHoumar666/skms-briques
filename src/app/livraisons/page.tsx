@@ -14,8 +14,7 @@ export default async function LivraisonsPage({
 }) {
   await requireUser();
   const params = await searchParams;
-  const livraisons = listLivraisons();
-  const fournisseurs = listFournisseurs();
+  const [livraisons, fournisseurs] = await Promise.all([listLivraisons(), listFournisseurs()]);
   const totalQuantite = livraisons.reduce((sum, l) => sum + l.quantite, 0);
   const totalMontant = livraisons.reduce((sum, l) => sum + l.quantite * l.prix_unitaire, 0);
 

@@ -20,7 +20,7 @@ export async function ajouterVente(formData: FormData) {
     redirect("/ventes?erreur=1");
   }
 
-  if (quantite > getStockModele(modele)) {
+  if (quantite > (await getStockModele(modele))) {
     redirect(`/ventes?erreur=stock&modele=${modele}`);
   }
 
@@ -28,11 +28,11 @@ export async function ajouterVente(formData: FormData) {
   const nouveauClient = (formData.get("nouveau_client") as string)?.trim();
 
   if (!clientId && nouveauClient) {
-    const result = createClient(nouveauClient, "", "");
-    clientId = String(result.lastInsertRowid);
+    const result = await createClient(nouveauClient, "", "");
+    clientId = String(result.id);
   }
 
-  const result = createVente({
+  const result = await createVente({
     created_by: user.id,
     statut_paiement: statut,
     modele,
@@ -45,5 +45,5 @@ export async function ajouterVente(formData: FormData) {
 
   revalidatePath("/ventes");
   revalidatePath("/tableau-de-bord");
-  redirect(`/recus/${result.lastInsertRowid}`);
+  redirect(`/recus/${result.id}`);
 }

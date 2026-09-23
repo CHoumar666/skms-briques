@@ -9,16 +9,18 @@ export const dynamic = "force-dynamic";
 
 export default async function TableauDeBordPage() {
   const user = await requireUser();
-  const stats = getStats();
-  const stockModeles = getStockParModele();
-  const livraisons = listLivraisons();
-  const ventes = listVentes();
+  const today = todayISO();
+  const [stats, stockModeles, livraisons, ventes, ventesDuJour] = await Promise.all([
+    getStats(),
+    getStockParModele(),
+    listLivraisons(),
+    listVentes(),
+    listVentesParDate(today),
+  ]);
   const dernieresLivraisons = livraisons.slice(0, 5);
   const dernieresVentes = ventes.slice(0, 5);
 
   if (user.role === "personnel") {
-    const today = todayISO();
-    const ventesDuJour = listVentesParDate(today);
     const livraisonsDuJour = livraisons.filter((l) => l.date === today);
 
     return (

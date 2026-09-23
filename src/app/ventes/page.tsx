@@ -15,9 +15,7 @@ export default async function VentesPage({
 }) {
   await requireUser();
   const params = await searchParams;
-  const ventes = listVentes();
-  const clients = listClients();
-  const stockModeles = getStockParModele();
+  const [ventes, clients, stockModeles] = await Promise.all([listVentes(), listClients(), getStockParModele()]);
   const totalQuantite = ventes.reduce((sum, v) => sum + v.quantite, 0);
   const totalMontant = ventes.reduce((sum, v) => sum + v.quantite * v.prix_unitaire, 0);
 

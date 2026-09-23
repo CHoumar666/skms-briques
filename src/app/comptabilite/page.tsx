@@ -16,8 +16,7 @@ export default async function ComptabilitePage({
   const user = await requireUser();
   const estProprietaire = user.role === "proprietaire";
   const params = await searchParams;
-  const stats = getStats();
-  const ledger = getLedger();
+  const [stats, ledger] = await Promise.all([getStats(), getLedger()]);
 
   return (
     <div>

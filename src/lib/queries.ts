@@ -1,42 +1,42 @@
 import "server-only";
 import { MODELES, libelleModele } from "./modeles";
-import db, { Client, Fournisseur, Livraison, StatutLivraison, StatutVente, Transaction, Vente } from "./db";
+import sql, { Client, Fournisseur, Livraison, StatutLivraison, StatutVente, Transaction, Vente } from "./db";
 
-export function listFournisseurs(): Fournisseur[] {
-  return db.prepare("SELECT * FROM fournisseurs ORDER BY nom").all() as Fournisseur[];
+export async function listFournisseurs(): Promise<Fournisseur[]> {
+  return sql<Fournisseur[]>`SELECT * FROM fournisseurs ORDER BY nom`;
 }
 
-export function createFournisseur(nom: string, telephone: string) {
-  return db
-    .prepare("INSERT INTO fournisseurs (nom, telephone) VALUES (?, ?)")
-    .run(nom, telephone || null);
+export async function createFournisseur(nom: string, telephone: string) {
+  const [row] = await sql<{ id: number }[]>`
+    INSERT INTO fournisseurs (nom, telephone) VALUES (${nom}, ${telephone || null}) RETURNING id
+  `;
+  return row;
 }
 
-export function listClients(): Client[] {
-  return db.prepare("SELECT * FROM clients ORDER BY nom").all() as Client[];
+export async function listClients(): Promise<Client[]> {
+  return sql<Client[]>`SELECT * FROM clients ORDER BY nom`;
 }
 
-export function createClient(nom: string, telephone: string, adresse: string) {
-  return db
-    .prepare("INSERT INTO clients (nom, telephone, adresse) VALUES (?, ?, ?)")
-    .run(nom, telephone || null, adresse || null);
+export async function createClient(nom: string, telephone: string, adresse: string) {
+  const [row] = await sql<{ id: number }[]>`
+    INSERT INTO clients (nom, telephone, adresse) VALUES (${nom}, ${telephone || null}, ${adresse || null}) RETURNING id
+  `;
+  return row;
 }
 
 export type LivraisonAvecFournisseur = Livraison & { fournisseur_nom: string | null; saisi_par: string | null };
 
-export function listLivraisons(): LivraisonAvecFournisseur[] {
-  return db
-    .prepare(
-      `SELECT l.*, f.nom as fournisseur_nom, u.username as saisi_par
-       FROM livraisons l
-       LEFT JOIN fournisseurs f ON f.id = l.fournisseur_id
-       LEFT JOIN users u ON u.id = l.created_by
-       ORDER BY l.date DESC, l.id DESC`
-    )
-    .all() as LivraisonAvecFournisseur[];
+export async function listLivraisons(): Promise<LivraisonAvecFournisseur[]> {
+  return sql<LivraisonAvecFournisseur[]>`
+    SELECT l.*, f.nom as fournisseur_nom, u.username as saisi_par
+    FROM livraisons l
+    LEFT JOIN fournisseurs f ON f.id = l.fournisseur_id
+    LEFT JOIN users u ON u.id = l.created_by
+    ORDER BY l.date DESC, l.id DESC
+  `;
 }
 
-export function createLivraison(input: {
+export async function createLivraison(input: {
   date: string;
   fournisseur_id: number | null;
   quantite: number;
@@ -46,48 +46,33 @@ export function createLivraison(input: {
   modele: string;
   statut_paiement: StatutLivraison;
 }) {
-  return db
-    .prepare(
-      `INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes, created_by, statut_paiement, modele)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      input.date,
-      input.fournisseur_id,
-      input.quantite,
-      input.prix_unitaire,
-      input.notes || null,
-      input.created_by,
-      input.statut_paiement,
-      input.modele
-    );
+  return sql`
+    INSERT INTO livraisons (date, fournisseur_id, quantite, prix_unitaire, notes, created_by, statut_paiement, modele)
+    VALUES (${input.date}, ${input.fournisseur_id}, ${input.quantite}, ${input.prix_unitaire}, ${input.notes || null}, ${input.created_by}, ${input.statut_paiement}, ${input.modele})
+  `;
 }
 
 export type VenteAvecClient = Vente & { client_nom: string | null; saisi_par: string | null };
 
-export function listVentes(): VenteAvecClient[] {
-  return db
-    .prepare(
-      `SELECT v.*, c.nom as client_nom, u.username as saisi_par
-       FROM ventes v
-       LEFT JOIN clients c ON c.id = v.client_id
-       LEFT JOIN users u ON u.id = v.created_by
-       ORDER BY v.date DESC, v.id DESC`
-    )
-    .all() as VenteAvecClient[];
+export async function listVentes(): Promise<VenteAvecClient[]> {
+  return sql<VenteAvecClient[]>`
+    SELECT v.*, c.nom as client_nom, u.username as saisi_par
+    FROM ventes v
+    LEFT JOIN clients c ON c.id = v.client_id
+    LEFT JOIN users u ON u.id = v.created_by
+    ORDER BY v.date DESC, v.id DESC
+  `;
 }
 
-export function listVentesParDate(date: string): VenteAvecClient[] {
-  return db
-    .prepare(
-      `SELECT v.*, c.nom as client_nom, u.username as saisi_par
-       FROM ventes v
-       LEFT JOIN clients c ON c.id = v.client_id
-       LEFT JOIN users u ON u.id = v.created_by
-       WHERE v.date = ?
-       ORDER BY v.id DESC`
-    )
-    .all(date) as VenteAvecClient[];
+export async function listVentesParDate(date: string): Promise<VenteAvecClient[]> {
+  return sql<VenteAvecClient[]>`
+    SELECT v.*, c.nom as client_nom, u.username as saisi_par
+    FROM ventes v
+    LEFT JOIN clients c ON c.id = v.client_id
+    LEFT JOIN users u ON u.id = v.created_by
+    WHERE v.date = ${date}
+    ORDER BY v.id DESC
+  `;
 }
 
 export type VenteAvecClientDetail = VenteAvecClient & {
@@ -95,19 +80,18 @@ export type VenteAvecClientDetail = VenteAvecClient & {
   client_adresse: string | null;
 };
 
-export function getVente(id: number): VenteAvecClientDetail | undefined {
-  return db
-    .prepare(
-      `SELECT v.*, c.nom as client_nom, c.telephone as client_telephone, c.adresse as client_adresse, u.username as saisi_par
-       FROM ventes v
-       LEFT JOIN clients c ON c.id = v.client_id
-       LEFT JOIN users u ON u.id = v.created_by
-       WHERE v.id = ?`
-    )
-    .get(id) as VenteAvecClientDetail | undefined;
+export async function getVente(id: number): Promise<VenteAvecClientDetail | undefined> {
+  const [row] = await sql<VenteAvecClientDetail[]>`
+    SELECT v.*, c.nom as client_nom, c.telephone as client_telephone, c.adresse as client_adresse, u.username as saisi_par
+    FROM ventes v
+    LEFT JOIN clients c ON c.id = v.client_id
+    LEFT JOIN users u ON u.id = v.created_by
+    WHERE v.id = ${id}
+  `;
+  return row;
 }
 
-export function createVente(input: {
+export async function createVente(input: {
   date: string;
   client_id: number | null;
   quantite: number;
@@ -117,36 +101,25 @@ export function createVente(input: {
   modele: string;
   statut_paiement: StatutVente;
 }) {
-  return db
-    .prepare(
-      `INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes, created_by, statut_paiement, modele)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      input.date,
-      input.client_id,
-      input.quantite,
-      input.prix_unitaire,
-      input.notes || null,
-      input.created_by,
-      input.statut_paiement,
-      input.modele
-    );
+  const [row] = await sql<{ id: number }[]>`
+    INSERT INTO ventes (date, client_id, quantite, prix_unitaire, notes, created_by, statut_paiement, modele)
+    VALUES (${input.date}, ${input.client_id}, ${input.quantite}, ${input.prix_unitaire}, ${input.notes || null}, ${input.created_by}, ${input.statut_paiement}, ${input.modele})
+    RETURNING id
+  `;
+  return row;
 }
 
 export type TransactionAvecAuteur = Transaction & { saisi_par: string | null };
 
-export function listTransactions(): TransactionAvecAuteur[] {
-  return db
-    .prepare(
-      `SELECT t.*, u.username as saisi_par FROM transactions t
-       LEFT JOIN users u ON u.id = t.created_by
-       ORDER BY t.date DESC, t.id DESC`
-    )
-    .all() as TransactionAvecAuteur[];
+export async function listTransactions(): Promise<TransactionAvecAuteur[]> {
+  return sql<TransactionAvecAuteur[]>`
+    SELECT t.*, u.username as saisi_par FROM transactions t
+    LEFT JOIN users u ON u.id = t.created_by
+    ORDER BY t.date DESC, t.id DESC
+  `;
 }
 
-export function createTransaction(input: {
+export async function createTransaction(input: {
   date: string;
   type: "depense" | "revenu";
   categorie: string;
@@ -154,30 +127,26 @@ export function createTransaction(input: {
   description: string;
   created_by: number;
 }) {
-  return db
-    .prepare(
-      `INSERT INTO transactions (date, type, categorie, montant, description, created_by)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(input.date, input.type, input.categorie, input.montant, input.description || null, input.created_by);
+  return sql`
+    INSERT INTO transactions (date, type, categorie, montant, description, created_by)
+    VALUES (${input.date}, ${input.type}, ${input.categorie}, ${input.montant}, ${input.description || null}, ${input.created_by})
+  `;
 }
 
 export type SourceOperation = "livraison" | "vente" | "transaction";
 const TABLES: Record<SourceOperation, string> = { livraison: "livraisons", vente: "ventes", transaction: "transactions" };
 
-export function supprimerOperation(source: SourceOperation, id: number, userId: number): boolean {
+export async function supprimerOperation(source: SourceOperation, id: number, userId: number): Promise<boolean> {
   const table = TABLES[source];
-  const ligne = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
-  if (!ligne) return false;
-  db.transaction(() => {
-    db.prepare("INSERT INTO audit_log (user_id, action, detail) VALUES (?, ?, ?)").run(
-      userId,
-      `suppression_${source}`,
-      JSON.stringify(ligne)
-    );
-    db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(id);
-  })();
-  return true;
+  return sql.begin(async (tx) => {
+    const [ligne] = await tx.unsafe(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+    if (!ligne) return false;
+    await tx`
+      INSERT INTO audit_log (user_id, action, detail) VALUES (${userId}, ${`suppression_${source}`}, ${JSON.stringify(ligne)})
+    `;
+    await tx.unsafe(`DELETE FROM ${table} WHERE id = $1`, [id]);
+    return true;
+  });
 }
 
 export type LigneComptable = {
@@ -194,27 +163,33 @@ export type LigneComptable = {
   compteEnCaisse: boolean;
 };
 
-export function setStatutPaiement(source: "livraison" | "vente", id: number, statut: string, userId: number): boolean {
+export async function setStatutPaiement(
+  source: "livraison" | "vente",
+  id: number,
+  statut: string,
+  userId: number
+): Promise<boolean> {
   const valides = source === "livraison" ? ["paye", "a_payer", "sans_paiement"] : ["paye", "a_encaisser"];
   if (!valides.includes(statut)) return false;
   const table = TABLES[source];
-  const avant = db.prepare(`SELECT statut_paiement FROM ${table} WHERE id = ?`).get(id) as { statut_paiement: string } | undefined;
-  if (!avant) return false;
-  db.transaction(() => {
-    db.prepare(`UPDATE ${table} SET statut_paiement = ? WHERE id = ?`).run(statut, id);
-    db.prepare("INSERT INTO audit_log (user_id, action, detail) VALUES (?, ?, ?)").run(
-      userId,
-      `paiement_${source}`,
-      JSON.stringify({ id, avant: avant.statut_paiement, apres: statut })
-    );
-  })();
-  return true;
+
+  return sql.begin(async (tx) => {
+    const [avant] = await tx.unsafe(`SELECT statut_paiement FROM ${table} WHERE id = $1`, [id]);
+    if (!avant) return false;
+    await tx.unsafe(`UPDATE ${table} SET statut_paiement = $1 WHERE id = $2`, [statut, id]);
+    await tx`
+      INSERT INTO audit_log (user_id, action, detail)
+      VALUES (${userId}, ${`paiement_${source}`}, ${JSON.stringify({ id, avant: avant.statut_paiement, apres: statut })})
+    `;
+    return true;
+  });
 }
 
-export function getLedger(): LigneComptable[] {
+export async function getLedger(): Promise<LigneComptable[]> {
   const lignes: LigneComptable[] = [];
+  const [livraisons, ventes, transactions] = await Promise.all([listLivraisons(), listVentes(), listTransactions()]);
 
-  for (const l of listLivraisons()) {
+  for (const l of livraisons) {
     lignes.push({
       id: `livraison-${l.id}`,
       source: "livraison",
@@ -230,7 +205,7 @@ export function getLedger(): LigneComptable[] {
     });
   }
 
-  for (const v of listVentes()) {
+  for (const v of ventes) {
     lignes.push({
       id: `vente-${v.id}`,
       source: "vente",
@@ -246,7 +221,7 @@ export function getLedger(): LigneComptable[] {
     });
   }
 
-  for (const t of listTransactions()) {
+  for (const t of transactions) {
     lignes.push({
       id: `transaction-${t.id}`,
       source: "transaction",
@@ -265,21 +240,27 @@ export function getLedger(): LigneComptable[] {
   return lignes.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
-function somme(sql: string): number {
-  return (db.prepare(sql).get() as { m: number }).m;
+async function somme(requete: ReturnType<typeof sql>): Promise<number> {
+  const [row] = (await requete) as unknown as { m: number | string }[];
+  return Number(row?.m ?? 0);
 }
 
-export function getStats() {
-  const stockBriques = somme("SELECT COALESCE(SUM(quantite), 0) AS m FROM livraisons") - somme("SELECT COALESCE(SUM(quantite), 0) AS m FROM ventes");
+export async function getStats() {
+  const [totalLivraisons, totalVentes, argentEncaisseVentes, argentEncaisseAutres, argentSortiLivraisons, argentSortiAutres, aPayer, aEncaisser] =
+    await Promise.all([
+      somme(sql`SELECT COALESCE(SUM(quantite), 0) AS m FROM livraisons`),
+      somme(sql`SELECT COALESCE(SUM(quantite), 0) AS m FROM ventes`),
+      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'paye'`),
+      somme(sql`SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'revenu'`),
+      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'paye'`),
+      somme(sql`SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'depense'`),
+      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'a_payer'`),
+      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'a_encaisser'`),
+    ]);
 
-  const argentEncaisse =
-    somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'paye'") +
-    somme("SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'revenu'");
-  const argentSorti =
-    somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'paye'") +
-    somme("SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'depense'");
-  const aPayer = somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'a_payer'");
-  const aEncaisser = somme("SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'a_encaisser'");
+  const stockBriques = totalLivraisons - totalVentes;
+  const argentEncaisse = argentEncaisseVentes + argentEncaisseAutres;
+  const argentSorti = argentSortiLivraisons + argentSortiAutres;
 
   return {
     stockBriques,
@@ -293,9 +274,11 @@ export function getStats() {
 
 export type StockModele = { id: string; label: string; stock: number };
 
-export function getStockParModele(): StockModele[] {
-  const entrees = db.prepare("SELECT modele, COALESCE(SUM(quantite), 0) AS q FROM livraisons GROUP BY modele").all() as { modele: string | null; q: number }[];
-  const sorties = db.prepare("SELECT modele, COALESCE(SUM(quantite), 0) AS q FROM ventes GROUP BY modele").all() as { modele: string | null; q: number }[];
+export async function getStockParModele(): Promise<StockModele[]> {
+  const [entrees, sorties] = await Promise.all([
+    sql<{ modele: string | null; q: number }[]>`SELECT modele, COALESCE(SUM(quantite), 0)::int AS q FROM livraisons GROUP BY modele`,
+    sql<{ modele: string | null; q: number }[]>`SELECT modele, COALESCE(SUM(quantite), 0)::int AS q FROM ventes GROUP BY modele`,
+  ]);
   const q = (rows: { modele: string | null; q: number }[], id: string | null) => rows.find((r) => r.modele === id)?.q ?? 0;
 
   const resultat: StockModele[] = MODELES.map((m) => ({ id: m.id, label: m.label, stock: q(entrees, m.id) - q(sorties, m.id) }));
@@ -304,6 +287,7 @@ export function getStockParModele(): StockModele[] {
   return resultat;
 }
 
-export function getStockModele(modele: string): number {
-  return getStockParModele().find((m) => m.id === modele)?.stock ?? 0;
+export async function getStockModele(modele: string): Promise<number> {
+  const stocks = await getStockParModele();
+  return stocks.find((m) => m.id === modele)?.stock ?? 0;
 }

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function VentesDuJourPage() {
   await requireOwner();
   const today = todayISO();
-  const ventes = listVentesParDate(today);
+  const ventes = await listVentesParDate(today);
   const totalQuantite = ventes.reduce((sum, v) => sum + v.quantite, 0);
   const totalMontant = ventes.reduce((sum, v) => sum + v.quantite * v.prix_unitaire, 0);
   const totalEncaisse = ventes.filter((v) => v.statut_paiement === "paye").reduce((sum, v) => sum + v.quantite * v.prix_unitaire, 0);

@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 export default async function RecuPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
   const { id } = await params;
-  const vente = getVente(Number(id));
+  const vente = await getVente(Number(id));
 
   if (!vente) return notFound();
 

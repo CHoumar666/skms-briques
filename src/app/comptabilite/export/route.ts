@@ -13,7 +13,8 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return new Response("Non autorisé", { status: 401 });
 
-  const lignes = getLedger().map((l) =>
+  const ledger = await getLedger();
+  const lignes = ledger.map((l) =>
     [l.date, l.type === "revenu" ? "Revenu" : "Dépense", l.categorie, l.description, l.saisi_par, ({ paye: "Payé", a_payer: "À payer", a_encaisser: "À encaisser", sans_paiement: "Sans paiement" })[l.statut], l.compteEnCaisse ? (l.type === "revenu" ? l.montant : -l.montant) : 0, l.montant]
       .map(cellule)
       .join(";")
