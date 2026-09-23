@@ -1,4 +1,5 @@
 import PageHeader from "@/components/PageHeader";
+import PasswordField from "@/components/PasswordField";
 import { formatDate } from "@/lib/format";
 import { requireOwner } from "@/lib/session";
 import { listUsers } from "@/lib/users";
@@ -46,7 +47,7 @@ export default async function EquipePage({
             </div>
             <div className="flex flex-col gap-1">
               <label htmlFor="password" className="text-sm font-medium text-slate-700">Mot de passe (10 caractères min.)</label>
-              <input id="password" name="password" type="password" required minLength={10} autoComplete="new-password" className={input} />
+              <PasswordField id="password" name="password" required minLength={10} autoComplete="new-password" className={input} />
             </div>
             <button type="submit" className="rounded-lg bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800 transition-colors">
               Créer le compte
@@ -88,15 +89,16 @@ export default async function EquipePage({
                           </form>
                           <form action={changerMotDePasse} className="flex items-center gap-2">
                             <input type="hidden" name="id" value={u.id} />
-                            <input
-                              name="password"
-                              type="password"
-                              minLength={10}
-                              required
-                              placeholder="Nouveau mot de passe"
-                              aria-label={`Nouveau mot de passe pour ${u.username}`}
-                              className={input + " w-48"}
-                            />
+                            <div className="w-48">
+                              <PasswordField
+                                name="password"
+                                minLength={10}
+                                required
+                                placeholder="Nouveau mot de passe"
+                                ariaLabel={`Nouveau mot de passe pour ${u.username}`}
+                                className={input}
+                              />
+                            </div>
                             <button type="submit" className="text-orange-700 hover:underline">Changer</button>
                           </form>
                         </div>

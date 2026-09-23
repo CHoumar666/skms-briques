@@ -1,3 +1,4 @@
+import PasswordField from "@/components/PasswordField";
 import { connexion } from "./actions";
 
 export default async function ConnexionPage({
@@ -39,10 +40,10 @@ export default async function ConnexionPage({
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700">Mot de passe</label>
-            <input
+            <PasswordField
               name="password"
-              type="password"
               required
+              autoComplete="current-password"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
             />
           </div>

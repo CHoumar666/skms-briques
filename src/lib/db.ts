@@ -9,7 +9,27 @@ if (!connectionString) {
 }
 
 // `prepare: false` : compatible avec le pooler transactionnel de Supabase.
-const sql = postgres(connectionString, { prepare: false });
+// `max` limité + `connect_timeout` : le pooler accepte peu de connexions à la
+// fois ; sans ça, trop de requêtes en parallèle peuvent rester bloquées au lieu
+// d'échouer proprement.
+// `types` : par défaut, Postgres renvoie les dates comme de vrais objets Date
+// JavaScript (SQLite ne renvoyait que du texte). Tout le code compare/affiche
+// ces valeurs comme des chaînes ("2026-09-23") ; on force donc Postgres à les
+// renvoyer telles quelles, sans les transformer en objets Date.
+const sql = postgres(connectionString, {
+  prepare: false,
+  max: 5,
+  idle_timeout: 20,
+  connect_timeout: 10,
+  types: {
+    date: {
+      to: 1082,
+      from: [1082, 1114, 1184], // date, timestamp, timestamptz
+      serialize: (x: string) => x,
+      parse: (x: string) => x,
+    },
+  },
+});
 
 export default sql;
 

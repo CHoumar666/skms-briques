@@ -240,49 +240,59 @@ export async function getLedger(): Promise<LigneComptable[]> {
   return lignes.sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
-async function somme(requete: ReturnType<typeof sql>): Promise<number> {
-  const [row] = (await requete) as unknown as { m: number | string }[];
-  return Number(row?.m ?? 0);
-}
-
+// Un seul aller-retour vers Supabase au lieu de 8 requêtes séparées : le pooler
+// transactionnel n'aime pas beaucoup de requêtes simultanées sur une même page.
 export async function getStats() {
-  const [totalLivraisons, totalVentes, argentEncaisseVentes, argentEncaisseAutres, argentSortiLivraisons, argentSortiAutres, aPayer, aEncaisser] =
-    await Promise.all([
-      somme(sql`SELECT COALESCE(SUM(quantite), 0) AS m FROM livraisons`),
-      somme(sql`SELECT COALESCE(SUM(quantite), 0) AS m FROM ventes`),
-      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'paye'`),
-      somme(sql`SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'revenu'`),
-      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'paye'`),
-      somme(sql`SELECT COALESCE(SUM(montant), 0) AS m FROM transactions WHERE type = 'depense'`),
-      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM livraisons WHERE statut_paiement = 'a_payer'`),
-      somme(sql`SELECT COALESCE(SUM(quantite * prix_unitaire), 0) AS m FROM ventes WHERE statut_paiement = 'a_encaisser'`),
-    ]);
-
-  const stockBriques = totalLivraisons - totalVentes;
-  const argentEncaisse = argentEncaisseVentes + argentEncaisseAutres;
-  const argentSorti = argentSortiLivraisons + argentSortiAutres;
+  const [row] = await sql<
+    {
+      total_livraisons: number;
+      total_ventes: number;
+      argent_encaisse: number;
+      argent_sorti: number;
+      a_payer: number;
+      a_encaisser: number;
+    }[]
+  >`
+    SELECT
+      (SELECT COALESCE(SUM(quantite), 0) FROM livraisons)::int AS total_livraisons,
+      (SELECT COALESCE(SUM(quantite), 0) FROM ventes)::int AS total_ventes,
+      (
+        (SELECT COALESCE(SUM(quantite * prix_unitaire), 0) FROM ventes WHERE statut_paiement = 'paye') +
+        (SELECT COALESCE(SUM(montant), 0) FROM transactions WHERE type = 'revenu')
+      )::int AS argent_encaisse,
+      (
+        (SELECT COALESCE(SUM(quantite * prix_unitaire), 0) FROM livraisons WHERE statut_paiement = 'paye') +
+        (SELECT COALESCE(SUM(montant), 0) FROM transactions WHERE type = 'depense')
+      )::int AS argent_sorti,
+      (SELECT COALESCE(SUM(quantite * prix_unitaire), 0) FROM livraisons WHERE statut_paiement = 'a_payer')::int AS a_payer,
+      (SELECT COALESCE(SUM(quantite * prix_unitaire), 0) FROM ventes WHERE statut_paiement = 'a_encaisser')::int AS a_encaisser
+  `;
 
   return {
-    stockBriques,
-    argentEncaisse,
-    argentSorti,
-    soldeCaisse: argentEncaisse - argentSorti,
-    aPayer,
-    aEncaisser,
+    stockBriques: row.total_livraisons - row.total_ventes,
+    argentEncaisse: row.argent_encaisse,
+    argentSorti: row.argent_sorti,
+    soldeCaisse: row.argent_encaisse - row.argent_sorti,
+    aPayer: row.a_payer,
+    aEncaisser: row.a_encaisser,
   };
 }
 
 export type StockModele = { id: string; label: string; stock: number };
 
 export async function getStockParModele(): Promise<StockModele[]> {
-  const [entrees, sorties] = await Promise.all([
-    sql<{ modele: string | null; q: number }[]>`SELECT modele, COALESCE(SUM(quantite), 0)::int AS q FROM livraisons GROUP BY modele`,
-    sql<{ modele: string | null; q: number }[]>`SELECT modele, COALESCE(SUM(quantite), 0)::int AS q FROM ventes GROUP BY modele`,
-  ]);
-  const q = (rows: { modele: string | null; q: number }[], id: string | null) => rows.find((r) => r.modele === id)?.q ?? 0;
+  const rows = await sql<{ modele: string | null; stock: number }[]>`
+    SELECT modele, SUM(q)::int AS stock FROM (
+      SELECT modele, quantite AS q FROM livraisons
+      UNION ALL
+      SELECT modele, -quantite AS q FROM ventes
+    ) t
+    GROUP BY modele
+  `;
+  const stock = (id: string | null) => rows.find((r) => r.modele === id)?.stock ?? 0;
 
-  const resultat: StockModele[] = MODELES.map((m) => ({ id: m.id, label: m.label, stock: q(entrees, m.id) - q(sorties, m.id) }));
-  const ancien = q(entrees, null) - q(sorties, null);
+  const resultat: StockModele[] = MODELES.map((m) => ({ id: m.id, label: m.label, stock: stock(m.id) }));
+  const ancien = stock(null);
   if (ancien !== 0) resultat.push({ id: "ancien", label: "Non précisé", stock: ancien });
   return resultat;
 }
