@@ -13,7 +13,7 @@ export async function isRateLimited(cle: string): Promise<boolean> {
 }
 
 export async function recordFailedAttempt(cle: string): Promise<void> {
-  const expireA = new Date(Date.now() + WINDOW_MS);
+  const expireA = new Date(Date.now() + WINDOW_MS).toISOString();
   await sql`
     INSERT INTO login_attempts (cle, nombre, expire_a)
     VALUES (${cle}, 1, ${expireA})
