@@ -41,5 +41,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
+  // Exclut aussi les fichiers publics (images, polices...) : sans ça, tout fichier
+  // du dossier public/ (ex: la photo d'accueil) redirige vers /connexion pour un
+  // visiteur non connecté, au lieu de s'afficher.
+  matcher: "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:jpg|jpeg|png|gif|svg|webp|avif|ico|css|js|txt|xml|woff2?|ttf)$).*)",
 };
