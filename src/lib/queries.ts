@@ -291,3 +291,58 @@ export async function getStockModele(modele: string): Promise<number> {
   const stocks = await getStockParModele();
   return stocks.find((m) => m.id === modele)?.stock ?? 0;
 }
+
+export type LigneCategorie = { categorie: string; montant: number };
+
+export type RapportMensuel = {
+  mois: string;
+  argentEncaisse: number;
+  argentSorti: number;
+  solde: number;
+  depensesParCategorie: LigneCategorie[];
+  revenusParCategorie: LigneCategorie[];
+};
+
+// mois au format "YYYY-MM". Ne compte que l'argent réellement payé/encaissé
+// (même logique que le solde en caisse global) : une livraison "à payer" ou
+// une vente "à encaisser" n'apparaît pas ici tant qu'elle n'est pas réglée.
+export async function getRapportMensuel(mois: string): Promise<RapportMensuel> {
+  const [depensesParCategorie, revenusParCategorie] = await Promise.all([
+    sql<LigneCategorie[]>`
+      SELECT categorie, SUM(montant)::int AS montant FROM (
+        SELECT 'Achat briques' AS categorie, quantite * prix_unitaire AS montant
+        FROM livraisons
+        WHERE statut_paiement = 'paye' AND to_char(date, 'YYYY-MM') = ${mois}
+        UNION ALL
+        SELECT categorie, montant FROM transactions
+        WHERE type = 'depense' AND to_char(date, 'YYYY-MM') = ${mois}
+      ) t
+      GROUP BY categorie
+      ORDER BY montant DESC
+    `,
+    sql<LigneCategorie[]>`
+      SELECT categorie, SUM(montant)::int AS montant FROM (
+        SELECT 'Vente briques' AS categorie, quantite * prix_unitaire AS montant
+        FROM ventes
+        WHERE statut_paiement = 'paye' AND to_char(date, 'YYYY-MM') = ${mois}
+        UNION ALL
+        SELECT categorie, montant FROM transactions
+        WHERE type = 'revenu' AND to_char(date, 'YYYY-MM') = ${mois}
+      ) t
+      GROUP BY categorie
+      ORDER BY montant DESC
+    `,
+  ]);
+
+  const argentSorti = depensesParCategorie.reduce((s, d) => s + Number(d.montant), 0);
+  const argentEncaisse = revenusParCategorie.reduce((s, r) => s + Number(r.montant), 0);
+
+  return {
+    mois,
+    argentEncaisse,
+    argentSorti,
+    solde: argentEncaisse - argentSorti,
+    depensesParCategorie,
+    revenusParCategorie,
+  };
+}

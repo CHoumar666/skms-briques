@@ -1,8 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { CATEGORIES_DEPENSE, CATEGORIES_REVENU } from "@/lib/categories";
 import { ajouterTransaction } from "./actions";
 
 export default function TransactionForm() {
+  const [type, setType] = useState<"depense" | "revenu">("depense");
+  const categories = type === "depense" ? CATEGORIES_DEPENSE : CATEGORIES_REVENU;
+
   return (
     <form action={ajouterTransaction} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
       <div className="flex flex-col gap-1">
@@ -17,10 +22,13 @@ export default function TransactionForm() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-slate-700">Type</label>
+        <label htmlFor="type" className="text-sm font-medium text-slate-700">Type</label>
         <select
+          id="type"
           name="type"
           required
+          value={type}
+          onChange={(e) => setType(e.target.value as "depense" | "revenu")}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
         >
           <option value="depense">Dépense</option>
@@ -29,14 +37,21 @@ export default function TransactionForm() {
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-slate-700">Catégorie</label>
+        <label htmlFor="categorie" className="text-sm font-medium text-slate-700">Catégorie</label>
         <input
+          id="categorie"
           type="text"
           name="categorie"
+          list="categories-suggestions"
           required
-          placeholder="Ex: Transport, Salaires..."
+          placeholder="Ex: Carburant engins..."
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
         />
+        <datalist id="categories-suggestions">
+          {categories.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
       </div>
 
       <div className="flex flex-col gap-1">
