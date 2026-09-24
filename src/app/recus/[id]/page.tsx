@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import { libelleModele } from "@/lib/modeles";
 import { requireUser } from "@/lib/session";
 import PrintButton from "@/components/PrintButton";
@@ -9,7 +10,7 @@ import { notFound } from "next/navigation";
 export default async function RecuPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
   const { id } = await params;
-  const vente = await getVente(Number(id));
+  const vente = await withTimeout(getVente(Number(id)));
 
   if (!vente) return notFound();
 

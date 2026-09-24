@@ -187,7 +187,9 @@ export async function setStatutPaiement(
 
 export async function getLedger(): Promise<LigneComptable[]> {
   const lignes: LigneComptable[] = [];
-  const [livraisons, ventes, transactions] = await Promise.all([listLivraisons(), listVentes(), listTransactions()]);
+  const livraisons = await listLivraisons();
+  const ventes = await listVentes();
+  const transactions = await listTransactions();
 
   for (const l of livraisons) {
     lignes.push({
@@ -317,32 +319,30 @@ export type RapportMensuel = {
 // (même logique que le solde en caisse global) : une livraison "à payer" ou
 // une vente "à encaisser" n'apparaît pas ici tant qu'elle n'est pas réglée.
 export async function getRapportMensuel(mois: string): Promise<RapportMensuel> {
-  const [depensesParCategorie, revenusParCategorie] = await Promise.all([
-    sql<LigneCategorie[]>`
-      SELECT categorie, SUM(montant)::int AS montant FROM (
-        SELECT 'Achat briques' AS categorie, quantite * prix_unitaire AS montant
-        FROM livraisons
-        WHERE statut_paiement = 'paye' AND to_char(date, 'YYYY-MM') = ${mois}
-        UNION ALL
-        SELECT categorie, montant FROM transactions
-        WHERE type = 'depense' AND to_char(date, 'YYYY-MM') = ${mois}
-      ) t
-      GROUP BY categorie
-      ORDER BY montant DESC
-    `,
-    sql<LigneCategorie[]>`
-      SELECT categorie, SUM(montant)::int AS montant FROM (
-        SELECT 'Vente briques' AS categorie, quantite * prix_unitaire AS montant
-        FROM ventes
-        WHERE statut_paiement = 'paye' AND to_char(date, 'YYYY-MM') = ${mois}
-        UNION ALL
-        SELECT categorie, montant FROM transactions
-        WHERE type = 'revenu' AND to_char(date, 'YYYY-MM') = ${mois}
-      ) t
-      GROUP BY categorie
-      ORDER BY montant DESC
-    `,
-  ]);
+  const depensesParCategorie = await sql<LigneCategorie[]>`
+    SELECT categorie, SUM(montant)::int AS montant FROM (
+      SELECT 'Achat briques' AS categorie, quantite * prix_unitaire AS montant
+      FROM livraisons
+      WHERE statut_paiement = 'paye' AND to_char(date, 'YYYY-MM') = ${mois}
+      UNION ALL
+      SELECT categorie, montant FROM transactions
+      WHERE type = 'depense' AND to_char(date, 'YYYY-MM') = ${mois}
+    ) t
+    GROUP BY categorie
+    ORDER BY montant DESC
+  `;
+  const revenusParCategorie = await sql<LigneCategorie[]>`
+    SELECT categorie, SUM(montant)::int AS montant FROM (
+      SELECT 'Vente briques' AS categorie, quantite * prix_unitaire AS montant
+      FROM ventes
+      WHERE statut_paiement = 'paye' AND to_char(date, 'YYYY-MM') = ${mois}
+      UNION ALL
+      SELECT categorie, montant FROM transactions
+      WHERE type = 'revenu' AND to_char(date, 'YYYY-MM') = ${mois}
+    ) t
+    GROUP BY categorie
+    ORDER BY montant DESC
+  `;
 
   const argentSorti = depensesParCategorie.reduce((s, d) => s + Number(d.montant), 0);
   const argentEncaisse = revenusParCategorie.reduce((s, r) => s + Number(r.montant), 0);

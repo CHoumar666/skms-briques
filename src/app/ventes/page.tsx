@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import { libelleModele } from "@/lib/modeles";
 import { requireUser } from "@/lib/session";
 import PageHeader from "@/components/PageHeader";
@@ -15,7 +16,9 @@ export default async function VentesPage({
 }) {
   await requireUser();
   const params = await searchParams;
-  const [ventes, clients, stockModeles] = await Promise.all([listVentes(), listClients(), getStockParModele()]);
+  const ventes = await withTimeout(listVentes());
+  const clients = await withTimeout(listClients());
+  const stockModeles = await withTimeout(getStockParModele());
   const totalQuantite = ventes.reduce((sum, v) => sum + v.quantite, 0);
   const totalMontant = ventes.reduce((sum, v) => sum + v.quantite * v.prix_unitaire, 0);
 

@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import { formatDate, formatMontant, todayISO } from "@/lib/format";
@@ -10,13 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function TableauDeBordPage() {
   const user = await requireUser();
   const today = todayISO();
-  const [stats, stockModeles, livraisons, ventes, ventesDuJour] = await Promise.all([
-    getStats(),
-    getStockParModele(),
-    listLivraisons(),
-    listVentes(),
-    listVentesParDate(today),
-  ]);
+  // Requêtes l'une après l'autre plutôt qu'en parallèle : la base (offre
+  // gratuite) supporte mal plusieurs requêtes simultanées et peut bloquer.
+  const stats = await withTimeout(getStats());
+  const stockModeles = await withTimeout(getStockParModele());
+  const livraisons = await withTimeout(listLivraisons());
+  const ventes = await withTimeout(listVentes());
+  const ventesDuJour = await withTimeout(listVentesParDate(today));
   const dernieresLivraisons = livraisons.slice(0, 5);
   const dernieresVentes = ventes.slice(0, 5);
 

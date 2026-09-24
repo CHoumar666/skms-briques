@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import PageHeader from "@/components/PageHeader";
 import PasswordField from "@/components/PasswordField";
 import { formatDate } from "@/lib/format";
@@ -23,7 +24,7 @@ export default async function EquipePage({
 }) {
   await requireOwner();
   const params = await searchParams;
-  const users = await listUsers();
+  const users = await withTimeout(listUsers());
 
   return (
     <div>

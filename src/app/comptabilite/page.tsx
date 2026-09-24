@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import { formatDate, formatMontant } from "@/lib/format";
@@ -16,7 +17,8 @@ export default async function ComptabilitePage({
   const user = await requireUser();
   const estProprietaire = user.role === "proprietaire";
   const params = await searchParams;
-  const [stats, ledger] = await Promise.all([getStats(), getLedger()]);
+  const stats = await withTimeout(getStats());
+  const ledger = await withTimeout(getLedger());
 
   return (
     <div>

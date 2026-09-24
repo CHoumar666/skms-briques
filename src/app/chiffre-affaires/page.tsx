@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import PageHeader from "@/components/PageHeader";
 import StatCard from "@/components/StatCard";
 import { formatMoisLabel, formatMontant, moisActuel } from "@/lib/format";
@@ -14,7 +15,7 @@ export default async function ChiffreAffairesPage({
   await requireUser();
   const params = await searchParams;
   const mois = /^\d{4}-\d{2}$/.test(params.mois ?? "") ? (params.mois as string) : moisActuel();
-  const rapport = await getRapportMensuel(mois);
+  const rapport = await withTimeout(getRapportMensuel(mois));
 
   return (
     <div>
